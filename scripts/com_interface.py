@@ -11,8 +11,8 @@ class ComInterface:
     def __init__(self, test_name):
         # Only argument stuff
         self.running = False
-        self.bt_receiver = btReceiver(debug = True)
-        self.file_manager = fileManager(test_name, debug = True)
+        self.bt_receiver = btReceiver(debug = False)
+        self.file_manager = fileManager(test_name, debug = False)
 
     def initialize(self):
         #Buetooth
@@ -30,7 +30,7 @@ class ComInterface:
             packet = self.bt_receiver.packet
             self.bt_receiver.reset()
             #write data to file
-            self.file_manager.save_data(packet, 5)
+            self.file_manager.save_data(packet)
 
 if __name__ == '__main__':
     test_name = raw_input("test_name: ")

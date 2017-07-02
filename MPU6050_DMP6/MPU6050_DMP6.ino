@@ -378,83 +378,88 @@ void loop() {
         blinkState = !blinkState;
         digitalWrite(LED_PIN, blinkState);
     }
-    float var1 = ypr[1] * 180/M_PI;
-    float var2 = ypr[2] * 180/M_PI;
-    if (var1>126) var1 = 126;
-    if (var1<-126) var1 = -126;
-    if (var2>126) var2 = 126;
-    if (var2<-126) var2 = -126;    
-    test(var1, var2);
+    float var1 = ypr[0] * 180/M_PI;
+    float var2 = ypr[1] * 180/M_PI;
+    float var3 = ypr[2] * 180/M_PI;
+    float var4 = 0;
+    test(var1, var2, var3, var4);
 }
 
-void sendPacket(uint8_t framehead, uint8_t D1, uint8_t D2, uint8_t D3)
-{
-    uint8_t packet_len = 5;
-    uint8_t out_packet[5];
-    
-     //Initialize
-    for (int j=0;j<packet_len;j++) out_packet[j] = 0;
-    
-    //Build Packet
-    out_packet[0] = framehead;   //Frame head
-    out_packet[1] = D1;
-    out_packet[2] = D2;
-    out_packet[3] = D3;
-    out_packet[4] = checksum(out_packet, packet_len) & 0x00FF; //Low byte of data checksum;
-    
-    //Send packet
-    for (int j=0;j<packet_len;j++) Serial3.write(out_packet[j]);
+void sendFrame(uint8_t frame[], uint8_t sz)
+{   
+    for (int j=0;j<sz;j++) Serial3.write(frame[j]);
 }
 
 uint8_t checksum(uint8_t *packet, uint8_t n)
 {
     uint32_t sum = 0;
     for (int j=0;j<n-1;j++) sum += packet[j];
-    return sum & 0x00ff;
+    return sum & 0x00FF;
+}
+
+void bytesEncode(float number, uint8_t encode_bytes[])
+{
+    uint16_t int_part = (uint16_t) abs(number);           //[0-65535]
+    float decimal_part = (abs(number) - int_part)*100;   //[0-99]
+
+    uint8_t NH = (int_part)>>8;                //Number High Byte
+    uint8_t NL = (int_part) & 0x00FF;          //Number Low Byte
+    uint8_t D = (int)decimal_part;             //Decimal part (7 bits)
+    uint8_t SD = D;                                 //Sign and Decimal Byte
+    if (number<=0) SD = D|0b10000000;               //Sign bit
+
+    encode_bytes[0] = NH;
+    encode_bytes[1] = NL;
+    encode_bytes[2] = SD;
 }
 
 void encode(float data[], uint8_t packet[])
 {
-    uint8_t int1 = (uint8_t) abs(data[0]);
-    float decimal1 = (abs(data[0])-int1)*1000;
-    if(data[0]>=0)
-    {
-        packet[0] = abs(int1);
-        packet[1] = (uint8_t)abs(decimal1)+1;
-    }
-    else
-    {
-        packet[0] = abs(int1)|0b10000000;
-        packet[1] = (uint8_t)abs(decimal1);
-    }
-    uint8_t int2 = (uint8_t) abs(data[1]);
-    float decimal2 = (abs(data[1])-int2)*1000;
-    if(data[1]>=0)
-    {
-        packet[2] = abs(int2);
-        packet[3] = (uint8_t)abs(decimal2)+1;
-    }
-    else
-    {
-        packet[2] = abs(int2)|0b10000000;
-        packet[3] = (uint8_t)abs(decimal2);
-    }
+    uint8_t num1_bytes[3];
+    uint8_t num2_bytes[3];
+    uint8_t num3_bytes[3];
+    uint8_t num4_bytes[3];
+    bytesEncode(data[0], num1_bytes);
+    bytesEncode(data[1], num2_bytes);
+    bytesEncode(data[2], num3_bytes);
+    bytesEncode(data[3], num4_bytes);
 
-    packet[4] = checksum(packet, 5);
+    packet[0] = num1_bytes[0];
+    packet[1] = num1_bytes[1];
+    packet[2] = num1_bytes[2];
+
+    packet[3] = num2_bytes[0];
+    packet[4] = num2_bytes[1];
+    packet[5] = num2_bytes[2];
+
+    packet[6] = num3_bytes[0];
+    packet[7] = num3_bytes[1];
+    packet[8] = num3_bytes[2];
+
+    packet[9] = num4_bytes[0];
+    packet[10] = num4_bytes[1];
+    packet[11] = num4_bytes[2];
+
+    packet[12] = checksum(packet, 13);
 }
 
-void test(float D1, float D2)
+void printFrame(uint8_t frame[], uint8_t sz)
 {
-    float data[2] = {D1, D2};
-    uint8_t packet_test[5] = {0,0,0,0,0};
-    encode(data, packet_test);
-    sendPacket(packet_test[0], packet_test[1], packet_test[2], packet_test[3]);
-    /*Serial.print("packet_sent = [");
-    for (int i = 0; i < 4; i++)
+    Serial.print("packet_sent = [");
+    for (int i = 0; i < sz-1; i++)
     {
-        Serial.print(packet_test[i]);
+        Serial.print(frame[i]);
         Serial.print(",");
     }
-    Serial.print(packet_test[4]);
-    Serial.println("]");*/
+    Serial.print(frame[sz-1]);
+    Serial.println("]");
+}
+
+void test(float D1, float D2, float D3, float D4)
+{
+    float data[4] = {D1, D2, D3, D4};
+    uint8_t frame_test[13];
+    encode(data, frame_test);
+    sendFrame(frame_test, 13);
+    // printFrame(frame_test, 13);
 }

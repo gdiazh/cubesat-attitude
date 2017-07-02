@@ -11,7 +11,7 @@ ACK = 3
 class btReceiver(object):
     def __init__(self, debug = False):
         self.btSocket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-        self.packet = [0,0,0,0,0]
+        self.packet = [0,0,0,0,0,0,0,0,0,0,0,0,0]
         self.debug = debug
         self.timeout = False
 
@@ -42,7 +42,7 @@ class btReceiver(object):
             print "NON implemented Debug print type"
 
     def reset(self):
-        self.packet = [0,0,0,0,0]
+        self.packet = [0,0,0,0,0,0,0,0,0,0,0,0,0]
 
     def checksum(self, packet, sz):
         sum = 0
@@ -79,23 +79,25 @@ class btReceiver(object):
     def read(self):
         i = 0
         k = 0
-        while (k < 10):
+        sz = 13
+        while (k < 2*sz):
             byte = self.btSocket.recv(1)
-            # self.DEBUG_PRINT("info", "byte = "+str(byte))
             self.packet[i] = ord(byte)
             i+=1
-            if (i==5):
-                chksm = self.checksum(self.packet, 5) & 0x00FF #Low byte of data checksum
-                if (chksm == self.packet[4] and chksm !=0):
+            if (i==sz):
+                chksm = self.checksum(self.packet, sz) & 0x00FF #Low byte of data checksum
+                if (chksm == self.packet[sz-1] and chksm !=0):
+                    self.DEBUG_PRINT("info", "frame received = "+str(self.packet))
                     return True #packet received OK
                 else:
-                    for j in range(0,4): self.packet[j] = self.packet[j+1] #Shift Left packet
-                    self.packet[4] = 0 #Clean last byte to receive other packet
-                    i = 4
+                    for j in range(0,sz-1): self.packet[j] = self.packet[j+1] #Shift Left packet
+                    self.packet[sz-1] = 0 #Clean last byte to receive other packet
+                    i = sz-1
                     self.DEBUG_PRINT("warn", "Bad checksum = "+str(chksm))
             k+=1
         # Packet not received Correctly
-        for j in range(0,4): self.packet[j] = 0 #Reset packet
+        self.DEBUG_PRINT("error", "Frame lost")
+        for j in range(0,sz): self.packet[j] = 0 #Reset packet
         return False
 
 if __name__ == '__main__':
