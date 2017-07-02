@@ -26,6 +26,9 @@ min_var3 = 0;
 max_var4 = 0;
 min_var4 = 0;
 
+MAX_VALUE = 500;
+MIN_VALUE = -500;
+
 sz = 0;
 window_sz = 1000;
 
@@ -70,55 +73,59 @@ while 1
 	var4 = data(:,4);
 	sz = length(var1);
 
-	if (max(var1)>=max_var1)
+	if (max(var1)>=max_var1 && max(var1)<=MAX_VALUE)
 		max_var1 = max(var1);
 	end
-	if (min(var1)<=min_var1)
+	if (min(var1)<=min_var1 && min(var1)>=MIN_VALUE)
 		min_var1 = min(var1);
 	end
 
-	if (max(var2)>=max_var2)
+	if (max(var2)>=max_var2 && max(var2)<=MAX_VALUE)
 		max_var2 = max(var2);
 	end
-	if (min(var2)<=min_var2)
+	if (min(var2)<=min_var2 && min(var2)>=MIN_VALUE)
 		min_var2 = min(var2);
 	end
 
-	if (max(var3)>=max_var3)
+	if (max(var3)>=max_var3 && max(var3)<=MAX_VALUE)
 		max_var3 = max(var3);
 	end
-	if (min(var3)<=min_var3)
+	if (min(var3)<=min_var3 && min(var3)>=MIN_VALUE)
 		min_var3 = min(var3);
 	end
 
-	if (max(var4)>=max_var4)
+	if (max(var4)>=max_var4 && max(var4)<=MAX_VALUE)
 		max_var4 = max(var4);
 	end
-	if (min(var4)<=min_var4)
+	if (min(var4)<=min_var4 && min(var4)>=MIN_VALUE)
 		min_var4 = min(var4);
 	end
 
 	subplot(4,1,1);
 	% plot(fig1, var1, 'b')
 	plot(ax1, var1, 'b')
+	grid on
 	ylim([min_var1-10 max_var1+10])
 	% xlim([sz-window_sz sz+window_sz])
 	% hold on
 	subplot(4,1,2)
 	% plot(fig1, var2, 'r')
 	plot(ax2, var2, 'r')
+	grid on
 	ylim([min_var2-10 max_var2+10])
 	% xlim([sz-window_sz sz+window_sz])
 
 	subplot(4,1,3)
 	% plot(fig1, var2, 'r')
 	plot(ax3, var3, 'g')
+	grid on
 	ylim([min_var3-10 max_var3+10])
 	% xlim([sz-window_sz sz+window_sz])
 
 	subplot(4,1,4)
 	% plot(fig1, var2, 'r')
 	plot(ax4, var4, 'k')
+	grid on
 	ylim([min_var4-10 max_var4+10])
 	% xlim([sz-window_sz sz+window_sz])
 
