@@ -110,7 +110,7 @@ MPU6050 mpu;
 
 
 
-#define INTERRUPT_PIN 2  // use pin 2 on Arduino Uno & most boards
+#define INTERRUPT_PIN 3  // use pin 2 on Arduino Uno & most boards
 #define LED_PIN 13 // (Arduino is 13, Teensy is 11, Teensy++ is 6)
 bool blinkState = false;
 
@@ -158,7 +158,7 @@ uint8_t t;
 // ================================================================
 
 /*Output pins for ESC control*/
-#define ESC_PWM_PIN_OUT 9
+#define ESC_PWM_PIN_OUT 2
 #define ESC_DIR_PIN_OUT 6
 
 #define OFSET 2.1
@@ -179,7 +179,7 @@ uint8_t mode = 0;
 double Setpoint, Input, Output;
 
 //Specify the links and initial tuning parameters
-double Kp=0.2, Ki=0.5, Kd=0.1;
+double Kp=100, Ki=50, Kd=10;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
 // ================================================================
@@ -202,9 +202,9 @@ void setup() {
     // (115200 chosen because it is required for Teapot Demo output, but it's
     // really up to you depending on your project)
     Serial.begin(115200);
-    Serial3.begin(115200);
+    Serial1.begin(115200);
     while (!Serial); // wait for Leonardo enumeration, others continue immediately
-    while (!Serial3);
+    while (!Serial1);
 
     // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
     // Pro Mini running at 3.3v, cannot handle this baud rate reliably due to
@@ -271,7 +271,7 @@ void setup() {
     //initialize the variables we're linked to
     Input = 0;
     Setpoint = 0;
-    myPID.SetOutputLimits(-100, 100);
+    myPID.SetOutputLimits(-400, 400);
 
     //turn the PID on
     myPID.SetMode(AUTOMATIC);
@@ -417,7 +417,7 @@ void loop() {
         digitalWrite(LED_PIN, blinkState);
     }
 
-    updateSetpoint();
+    // updateSetpoint();
 
     Input = ypr[1] * 180/M_PI;
     myPID.Compute();
@@ -427,13 +427,16 @@ void loop() {
     float var3 = ypr[2] * 180/M_PI;
     float var4 = Output;
 
-    main_behavior();
-    test(var1, var2, var3, var4);
+    Serial.print(Input); Serial.print("\t\t\t"); Serial.println(Output);
+
+    hdd.rotate(Output);
+    // main_behavior();
+    // test(var1, var2, var3, var4);
 }
 
 void sendFrame(uint8_t frame[], uint8_t sz)
 {   
-    for (int j=0;j<sz;j++) Serial3.write(frame[j]);
+    for (int j=0;j<sz;j++) Serial1.write(frame[j]);
 }
 
 uint8_t checksum(uint8_t *packet, uint8_t n)
@@ -512,9 +515,9 @@ void test(float D1, float D2, float D3, float D4)
 
 void updateSetpoint(void)
 {
-    if(Serial.available() >= 1)
+    if(Serial1.available() >= 1)
     {
-        Setpoint = Serial.parseInt();
+        Setpoint = Serial1.parseInt();
         Serial.print("Setpoint = "); Serial.println(Setpoint);
     }
 }

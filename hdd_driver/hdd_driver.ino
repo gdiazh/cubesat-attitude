@@ -8,7 +8,7 @@
 #include "hdd_driver.h"
 
 /*Output pins for ESC control*/
-#define ESC_PWM_PIN_OUT 9
+#define ESC_PWM_PIN_OUT 2
 #define ESC_DIR_PIN_OUT 6
 
 // SoftwareSerial Bluetooth(7,8);    // RX, TX Arduino PINs, conected to Bluetooth

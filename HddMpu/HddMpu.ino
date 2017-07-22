@@ -9,10 +9,11 @@
 #include "Mpu6050.h"
 
 /*Output pins for ESC control*/
-#define ESC_PWM_PIN_OUT 9
+#define ESC_PWM_PIN_OUT 2
 #define ESC_DIR_PIN_OUT 6
 
-#define OFSET 2.1
+#define OFSET_PITCH 0.86
+#define OFSET_ROLL -0.27
 
 // SoftwareSerial Bluetooth(7,8);    // RX, TX Arduino PINs, conected to Bluetooth
 
@@ -52,7 +53,7 @@ void loop()
   mpu.updateAngle();
 
   //Calcs
-  calc_vel = (mpu.angle_[1]+OFSET)*5;
+  calc_vel = (mpu.angle_[1]+OFSET_PITCH)*5;
 
   if(Serial.available() >= 1)
   {
@@ -63,7 +64,7 @@ void loop()
       vel = new_vel;
       Serial.print("New speed set: ");
       Serial.println(vel);
-      Serial.print(mpu.angle_[0]); Serial.print(";"); Serial.println(mpu.angle_[1]+OFSET);
+      Serial.print(mpu.angle_[0]+OFSET_ROLL); Serial.print(";"); Serial.println(mpu.angle_[1]+OFSET_PITCH);
     }
     else if (new_vel == -1)
     {
@@ -71,21 +72,21 @@ void loop()
       vel = 0;
       hdd.idle();
       Serial.println("Motor Stoped");
-      Serial.print(mpu.angle_[0]); Serial.print(";"); Serial.println(mpu.angle_[1]+OFSET);
+      Serial.print(mpu.angle_[0]+OFSET_ROLL); Serial.print(";"); Serial.println(mpu.angle_[1]+OFSET_PITCH);
     }
     else if (new_vel == -2)
     {
       Serial.print("Motor speed: ");
       if (mode == 0) Serial.println(vel);
       else if (mode == 1) Serial.println(calc_vel);
-      Serial.print(mpu.angle_[0]); Serial.print(";"); Serial.println(mpu.angle_[1]+OFSET);
+      Serial.print(mpu.angle_[0]+OFSET_ROLL); Serial.print(";"); Serial.println(mpu.angle_[1]+OFSET_PITCH);
     }
     else if (new_vel == -3)
     {
       mode = 1;
       Serial.print("Balance Mode");
       Serial.print("Motor speed: "); Serial.println(vel);
-      Serial.print(mpu.angle_[0]); Serial.print(";"); Serial.println(mpu.angle_[1]+OFSET);
+      Serial.print(mpu.angle_[0]+OFSET_ROLL); Serial.print(";"); Serial.println(mpu.angle_[1]+OFSET_PITCH);
     }
   }
 }
