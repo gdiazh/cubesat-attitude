@@ -15,7 +15,7 @@ float HddDriver::torque2pwm(float value, float toLow, float toHigh)
   float old_range = fromHigh - fromLow;
   if (value < -fromHigh || value > fromHigh)
   {
-    debug_port_->println('Warning value out of range');
+    // debug_port_->println("Warning value out of range");
     value = fromHigh;
   }
   if (value<0) value = -value;

@@ -270,7 +270,7 @@ void setup() {
     // PID Initialization
     //initialize the variables we're linked to
     Input = 0;
-    Setpoint = 0;
+    Setpoint = -100.0;
     myPID.SetOutputLimits(-400, 400);
 
     //turn the PID on
@@ -419,7 +419,7 @@ void loop() {
 
     // updateSetpoint();
 
-    Input = ypr[1] * 180/M_PI;
+    Input = ypr[0] * 180/M_PI;
     myPID.Compute();
 
     float var1 = ypr[0] * 180/M_PI;
@@ -427,10 +427,10 @@ void loop() {
     float var3 = ypr[2] * 180/M_PI;
     float var4 = Output;
 
-    Serial.print(Input); Serial.print("\t\t\t"); Serial.println(Output);
+    // Serial.print(Input); Serial.print("\t\t\t"); Serial.println(Output);
 
     hdd.rotate(Output);
-    // main_behavior();
+    main_behavior();
     // test(var1, var2, var3, var4);
 }
 
@@ -560,5 +560,11 @@ void main_behavior()
       Serial.print("Balance Mode");
       Serial.print("Motor speed: "); Serial.println(vel);
     }
+    else if (new_vel == -4)
+    {
+      Setpoint = Input;
+      Serial.print("change set point");
+    }
+    Serial.print(Input); Serial.print("\t\t\t"); Serial.println(Output);
   }
 }
