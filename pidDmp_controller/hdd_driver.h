@@ -16,7 +16,7 @@
 // Motor parameters
 #define Km 0.0251
 #define K_ESC 100
-#define MAX_TORQUE 300
+#define MAX_TORQUE 600
 
 typedef struct StateVariables{
     float hdd_angle;

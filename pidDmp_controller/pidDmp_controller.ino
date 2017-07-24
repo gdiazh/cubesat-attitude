@@ -422,16 +422,16 @@ void loop() {
     Input = ypr[0] * 180/M_PI;
     myPID.Compute();
 
-    float var1 = ypr[0] * 180/M_PI;
-    float var2 = Input;
-    float var3 = ypr[2] * 180/M_PI;
-    float var4 = Output;
+    float var1 = Input;
+    float var2 = Output;
+    float var3 = Setpoint;
+    float var4 = ypr[2] * 180/M_PI;
 
     // Serial.print(Input); Serial.print("\t\t\t"); Serial.println(Output);
 
     hdd.rotate(Output);
     main_behavior();
-    // test(var1, var2, var3, var4);
+    test(var1, var2, var3, var4);
 }
 
 void sendFrame(uint8_t frame[], uint8_t sz)
@@ -531,9 +531,10 @@ void main_behavior()
   //Calcs
   calc_vel = Output;
 
-  if(Serial.available() >= 1)
+  if(Serial1.available() >= 1)
   {
-    new_vel = Serial.parseInt(); //Leer un entero por serial
+    new_vel = Serial1.parseInt(); //Leer un entero por serial
+    Serial.print("cmd: ");Serial.println(new_vel);
     if(new_vel != 0 and new_vel != -1 and new_vel != -2 and new_vel != -3)
     {
       mode = 0;

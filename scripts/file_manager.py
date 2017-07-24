@@ -87,16 +87,24 @@ class fileManager(object):
         else: number = -(int_part+(float(decimal_part)/100))
         return number
 
+    def saturate(self, data, MIN, MAX):
+        if data>MAX:
+            return MAX
+        elif data<MIN:
+            return MIN
+        else:
+            return data
+
     def decode(self, packet):
         number1_elements = self.getNumberElements(packet[0], packet[1], packet[2])
         number2_elements = self.getNumberElements(packet[3], packet[4], packet[5])
         number3_elements = self.getNumberElements(packet[6], packet[7], packet[8])
         number4_elements = self.getNumberElements(packet[9], packet[10], packet[11])
 
-        data1 = self.getNumber(number1_elements)
-        data2 = self.getNumber(number2_elements)
-        data3 = self.getNumber(number3_elements)
-        data4 = self.getNumber(number4_elements)
+        data1 = self.saturate(self.getNumber(number1_elements), -360, 360)
+        data2 = self.saturate(self.getNumber(number2_elements), -500, 500)
+        data3 = self.saturate(self.getNumber(number3_elements), -360, 360)
+        data4 = self.saturate(self.getNumber(number4_elements), -360, 360)
 
         return [data1, data2, data3, data4]
 

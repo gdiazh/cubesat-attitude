@@ -105,28 +105,32 @@ while 1
 	% plot(fig1, var1, 'b')
 	plot(ax1, var1, 'b')
 	grid on
-	ylim([min_var1-10 max_var1+10])
+	% ylim([min_var1-10 max_var1+10])
+	ylim([-10 300])
 	% xlim([sz-window_sz sz+window_sz])
 	% hold on
 	subplot(4,1,2)
 	% plot(fig1, var2, 'r')
 	plot(ax2, var2, 'r')
 	grid on
-	ylim([min_var2-10 max_var2+10])
+	% ylim([min_var2-10 max_var2+10])
+	ylim([-600 600])
 	% xlim([sz-window_sz sz+window_sz])
 
 	subplot(4,1,3)
 	% plot(fig1, var2, 'r')
 	plot(ax3, var3, 'g')
 	grid on
-	ylim([min_var3-10 max_var3+10])
+	% ylim([min_var3-10 max_var3+10])
+	ylim([-180 180])
 	% xlim([sz-window_sz sz+window_sz])
 
 	subplot(4,1,4)
 	% plot(fig1, var2, 'r')
 	plot(ax4, var4, 'k')
 	grid on
-	ylim([min_var4-10 max_var4+10])
+	% ylim([min_var4-10 max_var4+10])
+	ylim([-40 40])
 	% xlim([sz-window_sz sz+window_sz])
 
 	pause(1)
