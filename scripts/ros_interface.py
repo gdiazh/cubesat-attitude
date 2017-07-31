@@ -72,6 +72,10 @@ class BTRosInterface:
             self.bt_receiver.btSocket.send("-3")
         elif (msg.data == "change-setpoint"):
             self.bt_receiver.btSocket.send("-4")
+        elif (msg.data == "increase-setpoint"):
+            self.bt_receiver.btSocket.send("-5")
+        elif (msg.data == "decrease-setpoint"):
+            self.bt_receiver.btSocket.send("-6")
         else:
             rospy.logwarn("Unknown command")
             print "Unknown command"

@@ -179,7 +179,7 @@ uint8_t mode = 0;
 double Setpoint, Input, Output;
 
 //Specify the links and initial tuning parameters
-double Kp=100, Ki=50, Kd=10;
+double Kp=5, Ki=1, Kd=1;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
 // ================================================================
@@ -271,7 +271,7 @@ void setup() {
     //initialize the variables we're linked to
     Input = 0;
     Setpoint = -100.0;
-    myPID.SetOutputLimits(-400, 400);
+    myPID.SetOutputLimits(-700, 700);
 
     //turn the PID on
     myPID.SetMode(AUTOMATIC);
@@ -425,7 +425,7 @@ void loop() {
     float var1 = Input;
     float var2 = Output;
     float var3 = Setpoint;
-    float var4 = ypr[2] * 180/M_PI;
+    float var4 = Setpoint - Input;
 
     // Serial.print(Input); Serial.print("\t\t\t"); Serial.println(Output);
 
@@ -535,7 +535,7 @@ void main_behavior()
   {
     new_vel = Serial1.parseInt(); //Leer un entero por serial
     Serial.print("cmd: ");Serial.println(new_vel);
-    if(new_vel != 0 and new_vel != -1 and new_vel != -2 and new_vel != -3)
+    if(new_vel != 0 and new_vel != -1 and new_vel != -2 and new_vel != -3 and new_vel != -4 and new_vel != -5 and new_vel != -6)
     {
       mode = 0;
       vel = new_vel;
@@ -564,7 +564,17 @@ void main_behavior()
     else if (new_vel == -4)
     {
       Setpoint = Input;
-      Serial.print("change set point");
+      Serial.println("change set point");
+    }
+    else if (new_vel == -5)
+    {
+      Setpoint = Setpoint+10;
+      Serial.println("change set point");
+    }
+    else if (new_vel == -6)
+    {
+      Setpoint = Setpoint-10;
+      Serial.println("change set point");
     }
     Serial.print(Input); Serial.print("\t\t\t"); Serial.println(Output);
   }
