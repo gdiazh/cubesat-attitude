@@ -53,7 +53,7 @@ class btReceiver(object):
         self.DEBUG_PRINT("info", "Time out reach")
         self.timeout = True
 
-    def write(self, FH, D1, D2, D3):
+    def swrite(self, FH, D1, D2, D3):                              #Secure write [TO DO]
         checksum = (FH + D1 + D2 + D3) & 0x00ff
         #5 byte packet: FH D1 D2 D3 CS
         packet = bytearray([FH, D1, D2, D3, checksum])
@@ -75,6 +75,25 @@ class btReceiver(object):
             t.cancel()
             self.DEBUG_PRINT("info", "Packet sent OK.")
         self.timeout = False
+
+    def write(self, frame):
+        #N+1 byte frame: D1 D2 D3 D4 ... DN CS
+        print frame
+        for i in xrange(0,len(frame)):
+            self.btSocket.send(chr(frame[i]))
+        # frame_bytes = bytearray(frame)
+        # frame_str = ""
+        # for i in range(0,len(frame)):
+        #     frame_str += str(frame[i])
+        # print frame
+        # print frame_bytes
+        # print frame_str
+        # frame_str_encode = bytes(frame_str)
+        # frame_str_encode = frame_str_encode.encode('utf-8')
+        # print frame_str_encode
+
+        # self.btSocket.send(frame_bytes)
+        # self.btSocket.send(frame_str_encode)
 
     def read(self):
         i = 0

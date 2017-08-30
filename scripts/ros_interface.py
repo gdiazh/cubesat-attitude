@@ -13,8 +13,10 @@ from threading import Thread
 from std_msgs.msg import String
 from std_msgs.msg import Int16
 from std_msgs.msg import Float32
+from std_msgs.msg import Float32MultiArray
 from bt_receiver import btReceiver
 from file_manager import fileManager
+from command_parser import CommandParser
 
 class BTRosInterface:
     def __init__(self, test_name):
@@ -22,25 +24,30 @@ class BTRosInterface:
         self.running = False
         self.bt_receiver = btReceiver(debug = False)
         self.file_manager = fileManager(test_name, debug = False)
-        self.speed = 0
+        self.command_parser = CommandParser()
+        self.mode = "manual"
+        self.attitude = [0,0,0]     #[ypr]
+        self.speed = 0              #[RPM]
 
     def initialize(self):
         # Get params and allocate msgs
-        self.state_update_rate = rospy.get_param('/rate', 150)
+        self.state_update_rate = rospy.get_param('/rate', 1000)
         #Buetooth
         self.bt_receiver.initialize()
 
     def start(self):
         # Create subs, services, publishers, threads
         self.running = True
-		#subscribers
+        #subscribers
         self.command_sub = rospy.Subscriber('/controller_command', String, self.process_command)
-        self.speed_sub = rospy.Subscriber('/speed', Int16, self.set_speed)
+        self.speed_sub = rospy.Subscriber('/mode', String, self.set_mode)
+        self.speed_sub = rospy.Subscriber('/attitude', Float32MultiArray, self.set_attitude)
+        self.speed_sub = rospy.Subscriber('/speed', Float32, self.set_speed)
         #publishers
-        self.data1_pub = rospy.Publisher('/data1', Float32, queue_size=50)
-        self.data2_pub = rospy.Publisher('/data2', Float32, queue_size=50)
-        self.data3_pub = rospy.Publisher('/data3', Float32, queue_size=50)
-        self.data4_pub = rospy.Publisher('/data4', Float32, queue_size=50)
+        self.data1_pub = rospy.Publisher('/yaw', Float32, queue_size=70)
+        self.data2_pub = rospy.Publisher('/pid_vel', Float32, queue_size=70)
+        self.data3_pub = rospy.Publisher('/setpoint', Float32, queue_size=70)
+        self.data4_pub = rospy.Publisher('/error', Float32, queue_size=70)
         Thread(target=self.update_state).start()
 
     def stop(self):
@@ -54,6 +61,12 @@ class BTRosInterface:
         self.bt_receiver.stop()
         self.file_manager.stop()
 
+    def set_mode(self, msg):
+        self.mode = msg.data
+
+    def set_attitude(self, msg):
+        self.attitude = msg.data
+
     def set_speed(self, msg):
         self.speed = msg.data
 
@@ -62,23 +75,15 @@ class BTRosInterface:
         if (msg.data == "end") :
             self.running = False
             return
-        elif (msg.data == "set-speed"):
-            self.bt_receiver.btSocket.send(str(self.speed))
-        elif (msg.data == "stop"):
-            self.bt_receiver.btSocket.send("-1")
-        elif (msg.data == "print-speed"):
-            self.bt_receiver.btSocket.send("-2")
-        elif (msg.data == "automatic-mode"):
-            self.bt_receiver.btSocket.send("-3")
-        elif (msg.data == "change-setpoint"):
-            self.bt_receiver.btSocket.send("-4")
-        elif (msg.data == "increase-setpoint"):
-            self.bt_receiver.btSocket.send("-5")
-        elif (msg.data == "decrease-setpoint"):
-            self.bt_receiver.btSocket.send("-6")
         else:
-            rospy.logwarn("Unknown command")
-            print "Unknown command"
+            args = [self.mode, self.attitude, self.speed]
+            command_code = self.command_parser.parse_command(msg.data, args)
+            if (command_code!=[-1,-1,-1,-1]):
+                frame = self.file_manager.encode(command_code)
+                self.bt_receiver.write(frame)
+            else:
+                rospy.logwarn("Unknown command")
+                print "Unknown command"
 
     def update_state(self):
         rate = rospy.Rate(self.state_update_rate)

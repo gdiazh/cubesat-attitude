@@ -45,6 +45,8 @@ THE SOFTWARE.
 
 /*Requiered Libraries*/
 #include "hdd_driver.h"
+// #include <TimerThree.h>
+// #include <TimerOne.h>
 
 // class default I2C address is 0x68
 // specific I2C addresses may be passed as a parameter here
@@ -149,6 +151,16 @@ void dmpDataReady() {
 // ===               FRAME TEST PARAMS                          ===
 // ================================================================
 
+#define SET_SPEED 1
+#define KEEP_ATTITUDE 2
+#define SET_MODE 3
+#define STOP 4
+#define USE_CURRENT_SETPOINT 5
+#define INCREASE_SETPOINT 6
+#define DECREASE_SETPOINT 7
+#define PRINT_SPEED 8
+#define AUTOMATIC_MODE 9
+
 float a;
 float b;
 uint8_t t;
@@ -181,6 +193,11 @@ double Setpoint, Input, Output;
 //Specify the links and initial tuning parameters
 double Kp=5, Ki=1, Kd=1;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
+
+// ================================================================
+// ===               Comunication                               ===
+// ================================================================
+uint8_t Timeout = 0;
 
 // ================================================================
 // ===                      INITIAL SETUP                       ===
@@ -249,7 +266,7 @@ void setup() {
         mpuIntStatus = mpu.getIntStatus();
 
         // set our DMP Ready flag so the main loop() function knows it's okay to use it
-        Serial.println(F("DMP ready! Waiting for first interrupt..."));
+        Serial.println(F("DMP ready!"));
         dmpReady = true;
 
         // get expected DMP packet size for later comparison
@@ -494,13 +511,25 @@ void encode(float data[], uint8_t packet[])
 
 void printFrame(uint8_t frame[], uint8_t sz)
 {
-    Serial.print("packet_sent = [");
+    Serial.print("frame = [");
     for (int i = 0; i < sz-1; i++)
     {
         Serial.print(frame[i]);
         Serial.print(",");
     }
     Serial.print(frame[sz-1]);
+    Serial.println("]");
+}
+
+void printCommand(float com[], uint8_t sz)
+{
+    Serial.print("command = [");
+    for (int i = 0; i < sz-1; i++)
+    {
+        Serial.print(com[i]);
+        Serial.print(",");
+    }
+    Serial.print(com[sz-1]);
     Serial.println("]");
 }
 
@@ -522,8 +551,97 @@ void updateSetpoint(void)
     }
 }
 
+float getNumber(uint8_t byte1, uint8_t byte2, uint8_t byte3)
+{
+    // Numer Elements
+    uint16_t int_part = (byte1<<8)|byte2;
+    uint8_t sign = byte3>>7;
+    uint16_t decimal_part = byte3&(0b01111111);
+    // Number
+    float number;
+    if (sign == 0) number = int_part+((float)decimal_part/100);
+    else number = -(int_part+((float)decimal_part/100));
+    return number;
+}
+
+float saturate(float data, int16_t MIN, int16_t MAX)
+{
+    if (data>MAX)
+        return MAX;
+    else if (data<MIN)
+        return MIN;
+    else
+        return data;
+}
+
+void decode(uint8_t frame[], float data[])
+{
+    data[0] = saturate(getNumber(frame[0], frame[1], frame[2]), 0, 100);
+    data[1] = saturate(getNumber(frame[3], frame[4], frame[5]), -800, 800);
+    data[2] = saturate(getNumber(frame[6], frame[7], frame[8]), -360, 360);
+    data[3] = saturate(getNumber(frame[9], frame[10], frame[11]), -360, 360);
+}
+
+void stop_read(void)
+{
+    Serial.print("Stop Read");
+    // Timer1.detachInterrupt();
+    Timeout = 1;
+}
+
+uint8_t read(uint8_t frame[])
+{
+    uint8_t i = 0;
+    uint8_t k = 0;
+    uint8_t sz = 13;
+    // Serial.print("r");
+    // Timer1.initialize(30000);
+    // Timer1.attachInterrupt(stop_read);
+    while (k < 2*sz)// and !Timeout)
+    // while (Serial1.available() >= 1)
+    {
+        // Serial.print(">");
+        if (Serial1.available() >= 1)
+        {
+            uint8_t byte = Serial1.read();
+            frame[i] = byte;
+            // Serial.println(byte);
+            i+=1;
+            if (i==sz)
+            {
+                uint8_t chksm = checksum(frame, sz);
+                if (chksm == frame[sz-1] && chksm !=0)
+                {
+                    printFrame(frame, 13);
+                    return 1; // packet received OK
+                }
+                else
+                {
+                    // Bad checksum
+                    printFrame(frame, 13);
+                    Serial.println("Bad checksum");
+                    for (uint8_t j = 0; j < sz-1; j++)
+                    {
+                        frame[j] = frame[j+1]; // Shift frame Left
+                    }
+                    frame[sz-1] = 0; //Clean last byte to receive other packet
+                    i = sz-1;
+                }
+            }
+            k+=1;
+        }
+    }
+    // Frame not received Correctly
+    Serial.println("Frame Lost");
+    for (uint8_t j = 0; j < sz; j++) frame[j] = 0; // Reset packet
+    // Timeout = 0;
+    while(Serial1.available()) Serial1.read();
+    return 0;
+}
+
 void main_behavior()
 {
+  // Serial.println("M");
   /* test behavior */
   if (mode == 0) hdd.rotate(vel);
   else if (mode == 1) hdd.rotate(calc_vel);
@@ -533,48 +651,64 @@ void main_behavior()
 
   if(Serial1.available() >= 1)
   {
-    new_vel = Serial1.parseInt(); //Leer un entero por serial
-    Serial.print("cmd: ");Serial.println(new_vel);
-    if(new_vel != 0 and new_vel != -1 and new_vel != -2 and new_vel != -3 and new_vel != -4 and new_vel != -5 and new_vel != -6)
+    /*new_vel = Serial1.parseInt(); //Leer un entero por serial
+    Serial.print("cmd: ");Serial.println(new_vel);*/
+    uint8_t frame[13];
+    float command[4];
+    read(frame);
+    decode(frame, command);
+    // printFrame(frame, 13);
+    // printCommand(command, 4);
+    if(command[0]==SET_SPEED)
     {
       mode = 0;
-      vel = new_vel;
+      vel = command[1];
       Serial.print("New speed set: ");
       Serial.println(vel);
     }
-    else if (new_vel == -1)
+    else if (command[0]==KEEP_ATTITUDE)
+    {
+      Setpoint = command[1];
+      Serial.println("change set point");
+    }
+    else if (command[0]==SET_MODE)
+    {
+      mode = command[1];
+      Serial.println("change mode");
+    }
+    else if (command[0]==STOP)
     {
       mode = 0;
       vel = 0;
       hdd.idle();
       Serial.println("Motor Stoped");
     }
-    else if (new_vel == -2)
+    else if (command[0]==PRINT_SPEED)
     {
       Serial.print("Motor speed: ");
       if (mode == 0) Serial.println(vel);
       else if (mode == 1) Serial.println(calc_vel);
     }
-    else if (new_vel == -3)
+    else if (command[0] == AUTOMATIC_MODE)
     {
       mode = 1;
       Serial.print("Balance Mode");
       Serial.print("Motor speed: "); Serial.println(vel);
     }
-    else if (new_vel == -4)
+    else if (command[0] == USE_CURRENT_SETPOINT)
     {
       Setpoint = Input;
-      Serial.println("change set point");
+      Serial.println("using current pos as setpoint");
     }
-    else if (new_vel == -5)
+    else if (command[0] == INCREASE_SETPOINT)
     {
       Setpoint = Setpoint+10;
-      Serial.println("change set point");
+      Serial.println("Increase setpoint");
     }
-    else if (new_vel == -6)
+    else if (command[0] == DECREASE_SETPOINT)
     {
       Setpoint = Setpoint-10;
-      Serial.println("change set point");
+      Serial.println("decrease setpoint");
     }
     Serial.print(Input); Serial.print("\t\t\t"); Serial.println(Output);
   }
