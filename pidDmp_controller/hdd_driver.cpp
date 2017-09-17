@@ -38,7 +38,7 @@ void HddDriver::init_esc()
 
 int HddDriver::pwm_modulation(float vel_control)
 {
-    int pwm_duty_cycle = (int) torque2pwm(vel_control, 1300, 1850);
+    int pwm_duty_cycle = (int) torque2pwm(vel_control, min_pwm_, max_pwm_);
     return pwm_duty_cycle;
 }
 
@@ -64,7 +64,7 @@ void HddDriver::init(void)
 
     // initialize output variables
     output_vars_.output_vel = 0;     //[RPM]
-    output_vars_.output_pwm = 1400;  //[us]
+    output_vars_.output_pwm = 1000;  //[us]
     output_vars_.output_dir = 0;     //[0:right, 1:left]
 }
 

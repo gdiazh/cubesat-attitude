@@ -170,18 +170,37 @@ uint8_t t;
 // ================================================================
 
 /*Output pins for ESC control*/
-#define ESC_PWM_PIN_OUT 2
+#define ESC_PWM_PIN_OUT 7
 #define ESC_DIR_PIN_OUT 6
+
+#define ESC2_PWM_PIN_OUT 4
+#define ESC2_DIR_PIN_OUT A14
+
+#define ESC3_PWM_PIN_OUT 5
+#define ESC3_DIR_PIN_OUT A15
 
 #define OFSET 2.1
 
 /*Device Control Handler*/
-HddDriver hdd(ESC_PWM_PIN_OUT, ESC_DIR_PIN_OUT, &Serial);
+HddDriver hdd(ESC_PWM_PIN_OUT, ESC_DIR_PIN_OUT, 1300, 1850, &Serial);
+HddDriver hdd2(ESC2_PWM_PIN_OUT, ESC2_DIR_PIN_OUT, 1000, 1500, &Serial);
 
 int vel = 0;
 int new_vel = 0;
 float calc_vel = 0;
 uint8_t mode = 0;
+
+// ================================================================
+// ===               Sensor PARAMS                              ===
+// ================================================================
+
+#define HALL1 2
+#define HALL2 18
+#define HALL3 19
+
+unsigned long time_ref = 0;
+volatile uint8_t steps = 0;
+float speed_rpm = 0.0;
 
 // ================================================================
 // ===               PID PARAMS                                 ===
@@ -219,9 +238,9 @@ void setup() {
     // (115200 chosen because it is required for Teapot Demo output, but it's
     // really up to you depending on your project)
     Serial.begin(115200);
-    Serial1.begin(115200);
+    Serial2.begin(115200);
     while (!Serial); // wait for Leonardo enumeration, others continue immediately
-    while (!Serial1);
+    while (!Serial2);
 
     // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
     // Pro Mini running at 3.3v, cannot handle this baud rate reliably due to
@@ -293,8 +312,13 @@ void setup() {
     //turn the PID on
     myPID.SetMode(AUTOMATIC);
 
+    //Hall Encoder pins
+    pinMode(HALL3, INPUT);
+    attach_halls();
+
     //Init HDD
     hdd.init();
+    hdd2.init();
     Serial.println("HDD ready!");
 }
 
@@ -435,6 +459,9 @@ void loop() {
     }
 
     // updateSetpoint();
+    update_speed();
+    /*uint8_t tmp = digitalRead(HALL3);
+    Serial.println(tmp);*/
 
     Input = ypr[0] * 180/M_PI;
     myPID.Compute();
@@ -442,18 +469,18 @@ void loop() {
     float var1 = Input;
     float var2 = Output;
     float var3 = Setpoint;
-    float var4 = Setpoint - Input;
+    float var4 = speed_rpm;
 
     // Serial.print(Input); Serial.print("\t\t\t"); Serial.println(Output);
 
-    hdd.rotate(Output);
+    // hdd.rotate(Output);
     main_behavior();
     test(var1, var2, var3, var4);
 }
 
 void sendFrame(uint8_t frame[], uint8_t sz)
 {   
-    for (int j=0;j<sz;j++) Serial1.write(frame[j]);
+    for (int j=0;j<sz;j++) Serial2.write(frame[j]);
 }
 
 uint8_t checksum(uint8_t *packet, uint8_t n)
@@ -544,9 +571,9 @@ void test(float D1, float D2, float D3, float D4)
 
 void updateSetpoint(void)
 {
-    if(Serial1.available() >= 1)
+    if(Serial2.available() >= 1)
     {
-        Setpoint = Serial1.parseInt();
+        Setpoint = Serial2.parseInt();
         Serial.print("Setpoint = "); Serial.println(Setpoint);
     }
 }
@@ -598,12 +625,12 @@ uint8_t read(uint8_t frame[])
     // Timer1.initialize(30000);
     // Timer1.attachInterrupt(stop_read);
     while (k < 2*sz)// and !Timeout)
-    // while (Serial1.available() >= 1)
+    // while (Serial2.available() >= 1)
     {
         // Serial.print(">");
-        if (Serial1.available() >= 1)
+        if (Serial2.available() >= 1)
         {
-            uint8_t byte = Serial1.read();
+            uint8_t byte = Serial2.read();
             frame[i] = byte;
             // Serial.println(byte);
             i+=1;
@@ -635,7 +662,7 @@ uint8_t read(uint8_t frame[])
     Serial.println("Frame Lost");
     for (uint8_t j = 0; j < sz; j++) frame[j] = 0; // Reset packet
     // Timeout = 0;
-    while(Serial1.available()) Serial1.read();
+    while(Serial2.available()) Serial2.read();
     return 0;
 }
 
@@ -643,15 +670,23 @@ void main_behavior()
 {
   // Serial.println("M");
   /* test behavior */
-  if (mode == 0) hdd.rotate(vel);
-  else if (mode == 1) hdd.rotate(calc_vel);
+  if (mode == 0)
+  {
+    hdd.rotate(vel);
+    hdd2.rotate(vel);
+  }
+  else if (mode == 1)
+  {
+    hdd.rotate(calc_vel);
+    hdd2.rotate(calc_vel);
+  }
 
   //Calcs
   calc_vel = Output;
 
-  if(Serial1.available() >= 1)
+  if(Serial2.available() >= 1)
   {
-    /*new_vel = Serial1.parseInt(); //Leer un entero por serial
+    /*new_vel = Serial2.parseInt(); //Leer un entero por serial
     Serial.print("cmd: ");Serial.println(new_vel);*/
     uint8_t frame[13];
     float command[4];
@@ -681,6 +716,7 @@ void main_behavior()
       mode = 0;
       vel = 0;
       hdd.idle();
+      hdd2.idle();
       Serial.println("Motor Stoped");
     }
     else if (command[0]==PRINT_SPEED)
@@ -712,4 +748,39 @@ void main_behavior()
     }
     Serial.print(Input); Serial.print("\t\t\t"); Serial.println(Output);
   }
+}
+
+void attach_halls(void)
+{
+    // attachInterrupt(digitalPinToInterrupt(HALL1), step, FALLING);
+    // attachInterrupt(digitalPinToInterrupt(HALL2), step, FALLING);
+    attachInterrupt(digitalPinToInterrupt(HALL3), step, FALLING);
+}
+
+void dettach_halls(void)
+{
+    // detachInterrupt(digitalPinToInterrupt(HALL1));
+    // detachInterrupt(digitalPinToInterrupt(HALL2));
+    detachInterrupt(digitalPinToInterrupt(HALL3));
+}
+
+void update_speed(void)
+{
+    if (steps)
+    {
+        // Serial.print("steps:");Serial.println(steps);
+        dettach_halls();
+        speed_rpm = 30000.0*steps/(millis()-time_ref);
+        // Serial.print("speed_rpm:");Serial.println(speed_rpm);
+
+        time_ref = millis();
+        steps = 0;
+
+        attach_halls();
+    }
+}
+
+void step(void)
+{
+    steps++;
 }

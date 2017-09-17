@@ -104,7 +104,7 @@ class fileManager(object):
         data1 = self.saturate(self.getNumber(number1_elements), -360, 360)
         data2 = self.saturate(self.getNumber(number2_elements), -500, 500)
         data3 = self.saturate(self.getNumber(number3_elements), -360, 360)
-        data4 = self.saturate(self.getNumber(number4_elements), -360, 360)
+        data4 = self.saturate(self.getNumber(number4_elements), -200, 10000)
 
         return [data1, data2, data3, data4]
 

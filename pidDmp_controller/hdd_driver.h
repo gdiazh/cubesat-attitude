@@ -39,6 +39,8 @@ class HddDriver
     /*Members*/
     uint8_t esc_pwm_pin_;
     uint8_t esc_dir_pin_;
+    uint16_t min_pwm_;
+    uint16_t max_pwm_;
 
     Servo esc_;
 
@@ -54,9 +56,11 @@ public:
     HddDriver() {}
 
     // constructror parametrizado
-    HddDriver(uint8_t esc_pwm_pin, uint8_t esc_dir_pin, HardwareSerial *debug_port):
+    HddDriver(uint8_t esc_pwm_pin, uint8_t esc_dir_pin, uint16_t min_pwm, uint16_t max_pwm, HardwareSerial *debug_port):
         esc_pwm_pin_(esc_pwm_pin),
         esc_dir_pin_(esc_dir_pin),
+        min_pwm_(min_pwm),
+        max_pwm_(max_pwm),
         debug_port_(debug_port)
     {
         // Config pins
