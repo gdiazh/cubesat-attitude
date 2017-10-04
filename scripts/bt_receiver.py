@@ -11,7 +11,7 @@ ACK = 3
 class btReceiver(object):
     def __init__(self, debug = False):
         self.btSocket = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-        self.packet = [0,0,0,0,0,0,0,0,0,0,0,0,0]
+        self.packet = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
         self.debug = debug
         self.timeout = False
 
@@ -42,7 +42,7 @@ class btReceiver(object):
             print "NON implemented Debug print type"
 
     def reset(self):
-        self.packet = [0,0,0,0,0,0,0,0,0,0,0,0,0]
+        self.packet = [0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
     def checksum(self, packet, sz):
         sum = 0
@@ -98,7 +98,7 @@ class btReceiver(object):
     def read(self):
         i = 0
         k = 0
-        sz = 13
+        sz = 14
         while (k < 2*sz):
             byte = self.btSocket.recv(1)
             self.packet[i] = ord(byte)
@@ -116,7 +116,8 @@ class btReceiver(object):
             k+=1
         # Packet not received Correctly
         self.DEBUG_PRINT("error", "Frame lost")
-        for j in range(0,sz): self.packet[j] = 0 #Reset packet
+        self.reset()
+        # for j in range(0,sz): self.packet[j] = 0 #Reset packet
         return False
 
 if __name__ == '__main__':

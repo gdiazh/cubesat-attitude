@@ -3,6 +3,7 @@
 __author__ = 'gdiaz'
 
 # COMMAND PARSER
+import rospy
 
 class CommandParser:
     def __init__(self):

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 __author__ = 'gdiaz'
+import rospy
 
 class fileManager(object):
     def __init__(self, file_name, debug = False):
@@ -17,7 +18,8 @@ class fileManager(object):
     def DEBUG_PRINT(self, msg_type, msg):
         if not(self.debug): return
         if msg_type == "info":
-            print chr(27)+"[0;32m"+"[INFO]: "+chr(27)+"[0m" + msg
+            # print chr(27)+"[0;32m"+"[INFO]: "+chr(27)+"[0m" + msg
+            pass
         elif msg_type == "warn":
             print chr(27)+"[0;33m"+"[WARN]: "+chr(27)+"[0m" + msg
         elif msg_type == "error":
@@ -77,34 +79,53 @@ class fileManager(object):
         int_part = (byte1<<8)|byte2
         sign = byte3>>7
         decimal_part = byte3&(0b01111111)
-        return [int_part, sign, decimal_part]
+        debug_bytes = [byte1, byte2, byte3]
+        return [int_part, sign, decimal_part, debug_bytes]
 
     def getNumber(self, number_elements):
         int_part = number_elements[0]
         sign = number_elements[1]
         decimal_part = number_elements[2]
-        if (sign == 0): number = int_part+(float(decimal_part)/100)
-        else: number = -(int_part+(float(decimal_part)/100))
+        if (sign == 0):
+            # self.DEBUG_PRINT("warn", "pos, num_el = "+str([int_part, sign, decimal_part]))
+            number = int_part+(float(decimal_part)/100)
+            # self.DEBUG_PRINT("warn", "number = "+str(number))
+        else:
+            # self.DEBUG_PRINT("warn", "neg, num_el = "+str([int_part, sign, decimal_part]))
+            number = -(int_part+(float(decimal_part)/100))
+            # self.DEBUG_PRINT("warn", "number = "+str(number))
         return number
 
-    def saturate(self, data, MIN, MAX):
+    def saturate(self, data, MIN, MAX, nm, i):
+        return data
         if data>MAX:
-            return MAX
+            self.DEBUG_PRINT("error", "Data over = "+str(data))
+            self.DEBUG_PRINT("error", "nm"+str(i)+ "= "+str(nm))
+            # return MAX
         elif data<MIN:
-            return MIN
-        else:
-            return data
+            self.DEBUG_PRINT("error", "Data under = "+str(data))
+            self.DEBUG_PRINT("error", "nm"+str(i)+ "= "+str(nm))
+            # return MIN
+        # else:
+        return data
 
     def decode(self, packet):
-        number1_elements = self.getNumberElements(packet[0], packet[1], packet[2])
-        number2_elements = self.getNumberElements(packet[3], packet[4], packet[5])
-        number3_elements = self.getNumberElements(packet[6], packet[7], packet[8])
-        number4_elements = self.getNumberElements(packet[9], packet[10], packet[11])
+        if packet[1]>=11 or packet[4]>=11 or packet[7]>=11 or packet[10]>=11:
+            self.DEBUG_PRINT("warn", "issue frame = "+str(packet))
 
-        data1 = self.saturate(self.getNumber(number1_elements), -360, 360)
-        data2 = self.saturate(self.getNumber(number2_elements), -500, 500)
-        data3 = self.saturate(self.getNumber(number3_elements), -360, 360)
-        data4 = self.saturate(self.getNumber(number4_elements), -200, 10000)
+        frame_id = packet[0]
+
+        number1_elements = self.getNumberElements(packet[1], packet[2], packet[3])
+        data1 = self.saturate(self.getNumber(number1_elements), -360, 360, number1_elements, 1)
+
+        number2_elements = self.getNumberElements(packet[4], packet[5], packet[6])
+        data2 = self.saturate(self.getNumber(number2_elements), -360, 360, number2_elements, 2)
+
+        number3_elements = self.getNumberElements(packet[7], packet[8], packet[9])
+        data3 = self.saturate(self.getNumber(number3_elements), -10, 3000, number3_elements, 3)
+
+        number4_elements = self.getNumberElements(packet[10], packet[11], packet[12])
+        data4 = self.saturate(self.getNumber(number4_elements), -10, 3000, number4_elements, 4)
 
         return [data1, data2, data3, data4]
 

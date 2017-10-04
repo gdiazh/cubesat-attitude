@@ -172,14 +172,14 @@ uint8_t t;
 // ================================================================
 
 /*Output pins for ESC control*/
-#define ESC_PWM_PIN_OUT 7
-#define ESC_DIR_PIN_OUT 6
+#define ESC_PWM_PIN_OUT 5
+#define ESC_DIR_PIN_OUT 4
 
-#define ESC2_PWM_PIN_OUT 4
-#define ESC2_DIR_PIN_OUT A14
+#define ESC2_PWM_PIN_OUT 6
+#define ESC2_DIR_PIN_OUT 7
 
-#define ESC3_PWM_PIN_OUT 5
-#define ESC3_DIR_PIN_OUT A15
+#define ESC3_PWM_PIN_OUT 9
+#define ESC3_DIR_PIN_OUT 8
 
 #define OFSET 2.1
 
@@ -197,8 +197,8 @@ uint8_t mode = 0;
 // ================================================================
 
 #define HALL1 2
-#define HALL2 18
-#define HALL3 19
+#define HALL2 16
+#define HALL3 17
 
 unsigned long time_ref = 0;
 volatile uint8_t steps = 0;
@@ -223,7 +223,6 @@ PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 // ===               Comunication                               ===
 // ================================================================
 uint8_t Timeout = 0;
-uint8_t data_id = 0;
 
 // ================================================================
 // ===                      INITIAL SETUP                       ===
@@ -244,10 +243,10 @@ void setup() {
     // initialize serial communication
     // (115200 chosen because it is required for Teapot Demo output, but it's
     // really up to you depending on your project)
+    // Serial.begin(115200);
     Serial.begin(115200);
-    Serial2.begin(115200);
     while (!Serial); // wait for Leonardo enumeration, others continue immediately
-    while (!Serial2);
+    // while (!Serial2);
 
     // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
     // Pro Mini running at 3.3v, cannot handle this baud rate reliably due to
@@ -256,22 +255,22 @@ void setup() {
     // crystal solution for the UART timer.
 
     // initialize device
-    Serial.println(F("Initializing I2C devices..."));
+    // Serial.println(F("Initializing I2C devices..."));
     mpu.initialize();
     pinMode(INTERRUPT_PIN, INPUT);
 
     // verify connection
-    Serial.println(F("Testing device connections..."));
-    Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+    // Serial.println(F("Testing device connections..."));
+    // Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
 
     // wait for ready
-    Serial.println(F("\nSend any character to begin DMP programming and demo: "));
+    // Serial.println(F("\nSend any character to begin DMP programming and demo: "));
     /*while (Serial.available() && Serial.read()); // empty buffer
     while (!Serial.available());                 // wait for data
     while (Serial.available() && Serial.read()); // empty buffer again*/
 
     // load and configure the DMP
-    Serial.println(F("Initializing DMP..."));
+    // Serial.println(F("Initializing DMP..."));
     devStatus = mpu.dmpInitialize();
 
     // supply your own gyro offsets here, scaled for min sensitivity
@@ -283,16 +282,16 @@ void setup() {
     // make sure it worked (returns 0 if so)
     if (devStatus == 0) {
         // turn on the DMP, now that it's ready
-        Serial.println(F("Enabling DMP..."));
+        // Serial.println(F("Enabling DMP..."));
         mpu.setDMPEnabled(true);
 
         // enable Arduino interrupt detection
-        Serial.println(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
+        // Serial.println(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
         attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), dmpDataReady, RISING);
         mpuIntStatus = mpu.getIntStatus();
 
         // set our DMP Ready flag so the main loop() function knows it's okay to use it
-        Serial.println(F("DMP ready!"));
+        // Serial.println(F("DMP ready!"));
         dmpReady = true;
 
         // get expected DMP packet size for later comparison
@@ -302,9 +301,9 @@ void setup() {
         // 1 = initial memory load failed
         // 2 = DMP configuration updates failed
         // (if it's going to break, usually the code will be 1)
-        Serial.print(F("DMP Initialization failed (code "));
-        Serial.print(devStatus);
-        Serial.println(F(")"));
+        // Serial.print(F("DMP Initialization failed (code "));
+        // Serial.print(devStatus);
+        // Serial.println(F(")"));
     }
 
     // configure LED for output
@@ -326,7 +325,7 @@ void setup() {
     //Init HDD
     hdd.init();
     hdd2.init();
-    Serial.println("HDD ready!");
+    // Serial.println("HDD ready!");
 }
 
 
@@ -364,7 +363,7 @@ void loop() {
     if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
         // reset so we can continue cleanly
         mpu.resetFIFO();
-        Serial.println(F("FIFO overflow!"));
+        // Serial.println(F("FIFO overflow!"));
 
     // otherwise, check for DMP data ready interrupt (this should happen frequently)
     } else if (mpuIntStatus & 0x02) {
@@ -381,26 +380,26 @@ void loop() {
         #ifdef OUTPUT_READABLE_QUATERNION
             // display quaternion values in easy matrix form: w x y z
             mpu.dmpGetQuaternion(&q, fifoBuffer);
-            Serial.print("quat\t");
-            Serial.print(q.w);
-            Serial.print("\t");
-            Serial.print(q.x);
-            Serial.print("\t");
-            Serial.print(q.y);
-            Serial.print("\t");
-            Serial.println(q.z);
+            // Serial.print("quat\t");
+            // Serial.print(q.w);
+            // Serial.print("\t");
+            // Serial.print(q.x);
+            // Serial.print("\t");
+            // Serial.print(q.y);
+            // Serial.print("\t");
+            // Serial.println(q.z);
         #endif
 
         #ifdef OUTPUT_READABLE_EULER
             // display Euler angles in degrees
             mpu.dmpGetQuaternion(&q, fifoBuffer);
             mpu.dmpGetEuler(euler, &q);
-            Serial.print("euler\t");
-            Serial.print(euler[0] * 180/M_PI);
-            Serial.print("\t");
-            Serial.print(euler[1] * 180/M_PI);
-            Serial.print("\t");
-            Serial.println(euler[2] * 180/M_PI);
+            // Serial.print("euler\t");
+            // Serial.print(euler[0] * 180/M_PI);
+            // Serial.print("\t");
+            // Serial.print(euler[1] * 180/M_PI);
+            // Serial.print("\t");
+            // Serial.println(euler[2] * 180/M_PI);
         #endif
 
         #ifdef OUTPUT_READABLE_YAWPITCHROLL
@@ -422,12 +421,12 @@ void loop() {
             mpu.dmpGetAccel(&aa, fifoBuffer);
             mpu.dmpGetGravity(&gravity, &q);
             mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-            Serial.print("areal\t");
-            Serial.print(aaReal.x);
-            Serial.print("\t");
-            Serial.print(aaReal.y);
-            Serial.print("\t");
-            Serial.println(aaReal.z);
+            // Serial.print("areal\t");
+            // Serial.print(aaReal.x);
+            // Serial.print("\t");
+            // Serial.print(aaReal.y);
+            // Serial.print("\t");
+            // Serial.println(aaReal.z);
         #endif
 
         #ifdef OUTPUT_READABLE_WORLDACCEL
@@ -438,12 +437,12 @@ void loop() {
             mpu.dmpGetGravity(&gravity, &q);
             mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
             mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
-            Serial.print("aworld\t");
-            Serial.print(aaWorld.x);
-            Serial.print("\t");
-            Serial.print(aaWorld.y);
-            Serial.print("\t");
-            Serial.println(aaWorld.z);
+            // Serial.print("aworld\t");
+            // Serial.print(aaWorld.x);
+            // Serial.print("\t");
+            // Serial.print(aaWorld.y);
+            // Serial.print("\t");
+            // Serial.println(aaWorld.z);
         #endif
     
         #ifdef OUTPUT_TEAPOT
@@ -456,7 +455,7 @@ void loop() {
             teapotPacket[7] = fifoBuffer[9];
             teapotPacket[8] = fifoBuffer[12];
             teapotPacket[9] = fifoBuffer[13];
-            Serial.write(teapotPacket, 14);
+            // Serial.write(teapotPacket, 14);
             teapotPacket[11]++; // packetCount, loops at 0xFF on purpose
         #endif
 
@@ -472,24 +471,18 @@ void loop() {
     Input = ypr[0] * 180/M_PI;
     myPID.Compute();
 
-    float var1 = Input;                 //yaw angle
-    float var2 = ypr[1] * 180/M_PI;     //pitch angle
-    float var3 = speed_rpm;             //wheel speed [rpm]
-    float var4 = filtered_speed;        //filtered wheel speed [rpm]
-
-    /*if (filtered_speed>=3000)
-    {
-        Serial.print("fs:"); Serial.println(filtered_speed);
-    }*/
+    float var1 = Input;
+    float var2 = 0;
+    float var3 = speed_rpm;
+    float var4 = filtered_speed;
 
     main_behavior();
-    send_data(1, var1, var2, var3, var4);
-    // data_id +=1;
+    send_data(var1, var2, var3, var4);
 }
 
 void sendFrame(uint8_t frame[], uint8_t sz)
 {   
-    for (int j=0;j<sz;j++) Serial2.write(frame[j]);
+    for (int j=0;j<sz;j++) Serial.write(frame[j]);
 }
 
 uint8_t checksum(uint8_t *packet, uint8_t n)
@@ -513,16 +506,9 @@ void bytesEncode(float number, uint8_t encode_bytes[])
     encode_bytes[0] = NH;
     encode_bytes[1] = NL;
     encode_bytes[2] = SD;
-
-    /*if (NH>=11)
-    {
-        Serial.print("n:"); Serial.println(number);
-        Serial.print("p:"); Serial.print(int_part);Serial.print(",");Serial.println(decimal_part);
-        Serial.print("b:"); Serial.print(NH);Serial.print(",");Serial.print(NL);Serial.print(",");Serial.println(SD);
-    }*/
 }
 
-void encode(uint8_t id, float data[], uint8_t packet[])
+void encode(float data[], uint8_t packet[])
 {
     uint8_t num1_bytes[3];
     uint8_t num2_bytes[3];
@@ -533,66 +519,64 @@ void encode(uint8_t id, float data[], uint8_t packet[])
     bytesEncode(data[2], num3_bytes);
     bytesEncode(data[3], num4_bytes);
 
-    packet[0] = id;
+    packet[0] = num1_bytes[0];
+    packet[1] = num1_bytes[1];
+    packet[2] = num1_bytes[2];
 
-    packet[1] = num1_bytes[0];
-    packet[2] = num1_bytes[1];
-    packet[3] = num1_bytes[2];
+    packet[3] = num2_bytes[0];
+    packet[4] = num2_bytes[1];
+    packet[5] = num2_bytes[2];
 
-    packet[4] = num2_bytes[0];
-    packet[5] = num2_bytes[1];
-    packet[6] = num2_bytes[2];
+    packet[6] = num3_bytes[0];
+    packet[7] = num3_bytes[1];
+    packet[8] = num3_bytes[2];
 
-    packet[7] = num3_bytes[0];
-    packet[8] = num3_bytes[1];
-    packet[9] = num3_bytes[2];
+    packet[9] = num4_bytes[0];
+    packet[10] = num4_bytes[1];
+    packet[11] = num4_bytes[2];
 
-    packet[10] = num4_bytes[0];
-    packet[11] = num4_bytes[1];
-    packet[12] = num4_bytes[2];
-
-    packet[13] = checksum(packet, 14);
+    packet[12] = checksum(packet, 13);
 }
 
 void printFrame(uint8_t frame[], uint8_t sz)
 {
-    Serial.print("frame = [");
+    // Serial.print("frame = [");
     for (int i = 0; i < sz-1; i++)
     {
-        Serial.print(frame[i]);
-        Serial.print(",");
+        // Serial.print(frame[i]);
+        // Serial.print(",");
     }
-    Serial.print(frame[sz-1]);
-    Serial.println("]");
+    // Serial.print(frame[sz-1]);
+    // Serial.println("]");
 }
 
 void printCommand(float com[], uint8_t sz)
 {
-    Serial.print("command = [");
+    // Serial.print("command = [");
     for (int i = 0; i < sz-1; i++)
     {
-        Serial.print(com[i]);
-        Serial.print(",");
+        // Serial.print(com[i]);
+        // Serial.print(",");
     }
-    Serial.print(com[sz-1]);
-    Serial.println("]");
+    // Serial.print(com[sz-1]);
+    // Serial.println("]");
 }
 
-void send_data(uint8_t id, float D1, float D2, float D3, float D4)
+void send_data(float D1, float D2, float D3, float D4)
 {
     float data[4] = {D1, D2, D3, D4};
-    uint8_t frame_test[14];
-    encode(id, data, frame_test);
-    sendFrame(frame_test, 14);
-    // printFrame(frame_test, 14);
+    uint8_t frame_test[13];
+    encode(data, frame_test);
+    sendFrame(frame_test, 13);
+    // printFrame(frame_test, 13);
 }
 
 void updateSetpoint(void)
 {
-    if(Serial2.available() >= 1)
+    if(Serial.available() >= 1)
     {
-        Setpoint = Serial2.parseInt();
-        Serial.print("Setpoint = "); Serial.println(Setpoint);
+        Setpoint = Serial.parseInt();
+        // Serial.print("Setpoint = "); Serial.println(Setpoint);
     }
 }
 
@@ -629,7 +613,7 @@ void decode(uint8_t frame[], float data[])
 
 void stop_read(void)
 {
-    Serial.print("Stop Read");
+    // Serial.print("Stop Read");
     // Timer1.detachInterrupt();
     Timeout = 1;
 }
@@ -643,12 +627,12 @@ uint8_t read(uint8_t frame[])
     // Timer1.initialize(30000);
     // Timer1.attachInterrupt(stop_read);
     while (k < 2*sz)// and !Timeout)
-    // while (Serial2.available() >= 1)
+    // while (Serial.available() >= 1)
     {
         // Serial.print(">");
-        if (Serial2.available() >= 1)
+        if (Serial.available() >= 1)
         {
-            uint8_t byte = Serial2.read();
+            uint8_t byte = Serial.read();
             frame[i] = byte;
             // Serial.println(byte);
             i+=1;
@@ -664,7 +648,7 @@ uint8_t read(uint8_t frame[])
                 {
                     // Bad checksum
                     printFrame(frame, 13);
-                    Serial.println("Bad checksum");
+                    // Serial.println("Bad checksum");
                     for (uint8_t j = 0; j < sz-1; j++)
                     {
                         frame[j] = frame[j+1]; // Shift frame Left
@@ -677,10 +661,10 @@ uint8_t read(uint8_t frame[])
         }
     }
     // Frame not received Correctly
-    Serial.println("Frame Lost");
+    // Serial.println("Frame Lost");
     for (uint8_t j = 0; j < sz; j++) frame[j] = 0; // Reset packet
     // Timeout = 0;
-    // while(Serial2.available()) Serial2.read();
+    while(Serial.available()) Serial.read();
     return 0;
 }
 
@@ -702,9 +686,9 @@ void main_behavior()
   //Calcs
   calc_vel = Output;
 
-  if(Serial2.available() >= 1)
+  if(Serial.available() >= 1)
   {
-    /*new_vel = Serial2.parseInt(); //Leer un entero por serial
+    /*new_vel = Serial.parseInt(); //Leer un entero por serial
     Serial.print("cmd: ");Serial.println(new_vel);*/
     uint8_t frame[13];
     float command[4];
@@ -716,18 +700,18 @@ void main_behavior()
     {
       mode = 0;
       vel = command[1];
-      Serial.print("New speed set: ");
-      Serial.println(vel);
+      // Serial.print("New speed set: ");
+      // Serial.println(vel);
     }
     else if (command[0]==KEEP_ATTITUDE)
     {
       Setpoint = command[1];
-      Serial.println("change set point");
+      // Serial.println("change set point");
     }
     else if (command[0]==SET_MODE)
     {
       mode = command[1];
-      Serial.println("change mode");
+      // Serial.println("change mode");
     }
     else if (command[0]==STOP)
     {
@@ -735,36 +719,36 @@ void main_behavior()
       vel = 0;
       hdd.idle();
       hdd2.idle();
-      Serial.println("Motor Stoped");
+      // Serial.println("Motor Stoped");
     }
     else if (command[0]==PRINT_SPEED)
     {
-      Serial.print("Motor speed: ");
-      if (mode == 0) Serial.println(vel);
-      else if (mode == 1) Serial.println(calc_vel);
+      // Serial.print("Motor speed: ");
+      // if (mode == 0) Serial.println(vel);
+      // else if (mode == 1) Serial.println(calc_vel);
     }
     else if (command[0] == AUTOMATIC_MODE)
     {
       mode = 1;
-      Serial.print("Balance Mode");
-      Serial.print("Motor speed: "); Serial.println(vel);
+      // Serial.print("Balance Mode");
+      // Serial.print("Motor speed: "); Serial.println(vel);
     }
     else if (command[0] == USE_CURRENT_SETPOINT)
     {
       Setpoint = Input;
-      Serial.println("using current pos as setpoint");
+      // Serial.println("using current pos as setpoint");
     }
     else if (command[0] == INCREASE_SETPOINT)
     {
       Setpoint = Setpoint+10;
-      Serial.println("Increase setpoint");
+      // Serial.println("Increase setpoint");
     }
     else if (command[0] == DECREASE_SETPOINT)
     {
       Setpoint = Setpoint-10;
-      Serial.println("decrease setpoint");
+      // Serial.println("decrease setpoint");
     }
-    Serial.print(Input); Serial.print("\t\t\t"); Serial.println(Output);
+    // Serial.print(Input); Serial.print("\t\t\t"); Serial.println(Output);
   }
 }
 

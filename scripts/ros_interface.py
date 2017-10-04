@@ -22,8 +22,8 @@ class BTRosInterface:
     def __init__(self, test_name):
         # Only argument stuff
         self.running = False
-        self.bt_receiver = btReceiver(debug = False)
-        self.file_manager = fileManager(test_name, debug = False)
+        self.bt_receiver = btReceiver(debug = True)
+        self.file_manager = fileManager(test_name, debug = True)
         self.command_parser = CommandParser()
         self.mode = "manual"
         self.attitude = [0,0,0]     #[ypr]
@@ -46,8 +46,8 @@ class BTRosInterface:
         #publishers
         self.data1_pub = rospy.Publisher('/yaw', Float32, queue_size=70)
         self.data2_pub = rospy.Publisher('/pid_vel', Float32, queue_size=70)
-        self.data3_pub = rospy.Publisher('/setpoint', Float32, queue_size=70)
-        self.data4_pub = rospy.Publisher('/error', Float32, queue_size=70)
+        self.data3_pub = rospy.Publisher('/wheel_speed', Float32, queue_size=70)
+        self.data4_pub = rospy.Publisher('/filtered_wheel_speed', Float32, queue_size=70)
         Thread(target=self.update_state).start()
 
     def stop(self):
@@ -89,21 +89,18 @@ class BTRosInterface:
         rate = rospy.Rate(self.state_update_rate)
         while self.running and not rospy.is_shutdown():
             # Receive data
-            self.bt_receiver.read()
-            packet = self.bt_receiver.packet
-            self.bt_receiver.reset()
-            #write data to file
-            self.file_manager.save_data(packet)
-            #publish data
-            data = self.file_manager.decode(packet)
-            try: self.data1_pub.publish(data[0])
-            except:
-                print data
-                print type(data)
-                print type(data[0])
-            self.data2_pub.publish(data[1])
-            self.data3_pub.publish(data[2])
-            self.data4_pub.publish(data[3])
+            if(self.bt_receiver.read()):
+                packet = self.bt_receiver.packet
+                if (packet[0]==1):
+                    self.bt_receiver.reset()
+                    #write data to file
+                    self.file_manager.save_data(packet)
+                    #publish data
+                    data = self.file_manager.decode(packet)
+                    self.data1_pub.publish(data[0])
+                    self.data2_pub.publish(data[1])
+                    self.data3_pub.publish(data[2])
+                    self.data4_pub.publish(data[3])
             rate.sleep()
 
 if __name__ == '__main__':
