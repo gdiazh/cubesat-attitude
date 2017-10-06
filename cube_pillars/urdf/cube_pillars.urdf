@@ -26,8 +26,7 @@
       </geometry>
       <material
         name="">
-        <color
-          rgba="0.79216 0.81961 0.93333 1" />
+        <color rgba="0.0 0.0 0.9 0.7" />
       </material>
     </visual>
     <collision>
@@ -64,10 +63,8 @@
         <mesh
           filename="package://cube_pillars/meshes/hook_link.STL" />
       </geometry>
-      <material
-        name="">
-        <color
-          rgba="1 1 1 1" />
+      <material name="">
+        <color rgba="0.66 0.66 0.66 0.6" />
       </material>
     </visual>
     <collision>
@@ -117,10 +114,8 @@
         <mesh
           filename="package://cube_pillars/meshes/components_link.STL" />
       </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.79216 0.81961 0.93333 1" />
+      <material name="">
+        <color rgba="0.0 0.9 0.0 0.7" />
       </material>
     </visual>
     <collision>
@@ -170,10 +165,8 @@
         <mesh
           filename="package://cube_pillars/meshes/x_wheel_link.STL" />
       </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.89804 0.91765 0.92941 1" />
+      <material name="">
+        <color rgba="0.0 0.0 0.0 0.6" />
       </material>
     </visual>
     <collision>
@@ -226,10 +219,8 @@
         <mesh
           filename="package://cube_pillars/meshes/y_wheel_link.STL" />
       </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.89804 0.91765 0.92941 1" />
+      <material name="">
+        <color rgba="0.0 0.0 0.0 0.6" />
       </material>
     </visual>
     <collision>
@@ -282,10 +273,8 @@
         <mesh
           filename="package://cube_pillars/meshes/z_wheel_link.STL" />
       </geometry>
-      <material
-        name="">
-        <color
-          rgba="0.89804 0.91765 0.92941 1" />
+      <material name="">
+        <color rgba="0.0 0.0 0.0 0.6" />
       </material>
     </visual>
     <collision>
@@ -314,4 +303,55 @@
       effort="1"
       velocity="1000" />
   </joint>
+  <!-- SDF properties -->
+  <!-- Colors -->
+  <gazebo reference="base_global_link">
+    <material>Gazebo/BlueEmissive</material>
+  </gazebo>
+  <gazebo reference="hook_link">
+    <material>Gazebo/DarkGray</material>
+  </gazebo>
+  <gazebo reference="components_link">
+    <material>Gazebo/PCBGreen</material>
+  </gazebo>
+  <gazebo reference="x_wheel_link">
+    <material>Gazebo/BlackTransparent</material>
+  </gazebo>
+  <gazebo reference="y_wheel_link">
+    <material>Gazebo/BlackTransparent</material>
+  </gazebo>
+  <gazebo reference="z_wheel_link">
+    <material>Gazebo/BlackTransparent</material>
+  </gazebo>
+  <!-- Dynamics -->
+  <gazebo reference="x_wheel_joint">
+    <provideFeedback>true</provideFeedback>
+  </gazebo>
+  <gazebo reference="y_wheel_joint">
+    <provideFeedback>true</provideFeedback>
+  </gazebo>
+  <gazebo reference="z_wheel_joint">
+    <provideFeedback>true</provideFeedback>
+  </gazebo>
+  <!-- Sensors -->
+  <gazebo reference="base_global_link">
+    <gravity>true</gravity>
+    <sensor name="imu_sensor" type="imu">
+      <always_on>true</always_on>
+      <update_rate>100</update_rate>
+      <visualize>true</visualize>
+      <topic>__default_topic__</topic>
+      <plugin name="imu_plugin" filename="libgazebo_ros_imu_sensor.so">
+        <robotNamespace>cube</robotNamespace>
+        <topicName>imu_data</topicName>
+        <bodyName>base_global_link</bodyName>
+        <updateRateHZ>10.0</updateRateHZ>
+        <gaussianNoise>0.0</gaussianNoise>
+        <xyzOffset>0 0 0</xyzOffset>
+        <rpyOffset>0 0 0</rpyOffset>
+        <frameName>base_global_link</frameName>
+      </plugin>
+      <pose>0 0 0 0 0 0</pose>
+    </sensor>
+  </gazebo>
 </robot>
