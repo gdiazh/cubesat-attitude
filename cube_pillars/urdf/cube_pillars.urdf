@@ -7,14 +7,14 @@
         xyz="3.7297E-17 1.5836E-15 0.15167"
         rpy="0 0 0" />
       <mass
-        value="0.59402" />
+        value="200.59402" />
       <inertia
-        ixx="0.0037192"
-        ixy="-1.6783E-20"
-        ixz="-6.3649E-19"
-        iyy="0.0080768"
-        iyz="-3.8004E-17"
-        izz="0.0044468" />
+        ixx="20.5"
+        ixy="0"
+        ixz="0"
+        iyy="20.5"
+        iyz="0"
+        izz="20.5" />
     </inertial>
     <visual>
       <origin
@@ -354,4 +354,42 @@
       <pose>0 0 0 0 0 0</pose>
     </sensor>
   </gazebo>
+  <!-- Control -->
+  <gazebo>
+  <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+    <robotNamespace>/cube</robotNamespace>
+  </plugin>
+</gazebo>
+<transmission name="tran1">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="x_wheel_joint">
+    <hardwareInterface>EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor1">
+    <hardwareInterface>EffortJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran2">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="y_wheel_joint">
+    <hardwareInterface>EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor2">
+    <hardwareInterface>EffortJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran3">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="z_wheel_joint">
+    <hardwareInterface>EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor3">
+    <hardwareInterface>EffortJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
 </robot>
