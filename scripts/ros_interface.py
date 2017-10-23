@@ -11,12 +11,14 @@ import rospy
 
 from threading import Thread
 from std_msgs.msg import String
-from std_msgs.msg import Int16
 from std_msgs.msg import Float32
 from std_msgs.msg import Float32MultiArray
 from bt_receiver import btReceiver
 from file_manager import fileManager
 from command_parser import CommandParser
+
+# Controller commands
+from command_parser import HDD_ZERO_SPEED
 
 class BTRosInterface:
     def __init__(self, test_name):
@@ -27,7 +29,7 @@ class BTRosInterface:
         self.command_parser = CommandParser()
         self.mode = "manual"
         self.attitude = [0,0,0]     #[ypr]
-        self.speed = 0              #[RPM]
+        self.speed = [HDD_ZERO_SPEED,HDD_ZERO_SPEED,HDD_ZERO_SPEED]              #[RPM]
 
     def initialize(self):
         # Get params and allocate msgs
@@ -42,7 +44,9 @@ class BTRosInterface:
         self.command_sub = rospy.Subscriber('/controller_command', String, self.process_command)
         self.speed_sub = rospy.Subscriber('/mode', String, self.set_mode)
         self.speed_sub = rospy.Subscriber('/attitude', Float32MultiArray, self.set_attitude)
-        self.speed_sub = rospy.Subscriber('/speed', Float32, self.set_speed)
+        self.speedX_sub = rospy.Subscriber('/speed_x', Float32, self.set_speed_x)
+        self.speedY_sub = rospy.Subscriber('/speed_y', Float32, self.set_speed_y)
+        self.speedZ_sub = rospy.Subscriber('/speed_z', Float32, self.set_speed_z)
         #publishers
         self.data1_pub = rospy.Publisher('/yaw', Float32, queue_size=70)
         self.data2_pub = rospy.Publisher('/pid_vel', Float32, queue_size=70)
@@ -53,7 +57,9 @@ class BTRosInterface:
     def stop(self):
         self.running = False
         self.command_sub.unregister()
-        self.speed_sub.unregister()
+        self.speedX_sub.unregister()
+        self.speedY_sub.unregister()
+        self.speedZ_sub.unregister()
         self.data1_pub.unregister()
         self.data2_pub.unregister()
         self.data3_pub.unregister()
@@ -67,8 +73,14 @@ class BTRosInterface:
     def set_attitude(self, msg):
         self.attitude = msg.data
 
-    def set_speed(self, msg):
-        self.speed = msg.data
+    def set_speed_x(self, msg):
+        self.speed[0] = msg.data
+
+    def set_speed_y(self, msg):
+        self.speed[1] = msg.data
+
+    def set_speed_z(self, msg):
+        self.speed[2] = msg.data
 
     def process_command(self, msg):
         print "msg to send:"+msg.data

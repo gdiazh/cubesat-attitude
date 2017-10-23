@@ -1,3 +1,4 @@
 scripts/data/*.txt
+scripts/motor_model_data/*.txt
 *.pyc
 *~

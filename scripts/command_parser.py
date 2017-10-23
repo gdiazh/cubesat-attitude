@@ -5,6 +5,13 @@ __author__ = 'gdiaz'
 # COMMAND PARSER
 import rospy
 
+# Controller commands
+STOP_X  = 10
+STOP_Y = 11
+STOP_Z = 12
+
+HDD_ZERO_SPEED = 1000
+
 class CommandParser:
     def __init__(self):
         self.command = "default"
@@ -14,14 +21,14 @@ class CommandParser:
         attitude = args[1]
         speed =args[2]
         if (command == "set-speed"):
-            self.command_code = [1, speed, 0, 0]
+            self.command_code = [1, speed[0], speed[1], speed[2]]
             # self.bt_receiver.btSocket.send(str(self.speed))
         elif (command == "keep-attitude"):
             self.command_code = [2, attitude[0], attitude[1], attitude[2]]
         elif (command == "set-mode"):
             self.command_code = [3, mode, 0, 0]
         elif (command == "stop"):
-            self.command_code = [4, 0, 0, 0]
+            self.command_code = [4, HDD_ZERO_SPEED, HDD_ZERO_SPEED, HDD_ZERO_SPEED]
             # self.bt_receiver.btSocket.send("-1")
         elif (command == "use-current-setpoint"):
             self.command_code = [5, 0, 0, 0]

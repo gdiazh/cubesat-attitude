@@ -162,6 +162,9 @@ void dmpDataReady() {
 #define DECREASE_SETPOINT 7
 #define PRINT_SPEED 8
 #define AUTOMATIC_MODE 9
+#define STOP_X 10
+#define STOP_Y 11
+#define STOP_Z 12
 
 float a;
 float b;
@@ -183,13 +186,18 @@ uint8_t t;
 
 #define OFSET 2.1
 
-/*Device Control Handler*/
-HddDriver hdd(ESC_PWM_PIN_OUT, ESC_DIR_PIN_OUT, 1300, 1850, &Serial);
-HddDriver hdd2(ESC2_PWM_PIN_OUT, ESC2_DIR_PIN_OUT, 1000, 1500, &Serial);
+#define HDD_ZERO_SPEED 1000
 
-int vel = 0;
-int new_vel = 0;
-float calc_vel = 0;
+/*Device Control Handler*/
+HddDriver hddx(ESC_PWM_PIN_OUT, ESC_DIR_PIN_OUT, 1300, 1850, &Serial);
+HddDriver hddy(ESC2_PWM_PIN_OUT, ESC2_DIR_PIN_OUT, 1000, 1500, &Serial);
+
+int vel_x = HDD_ZERO_SPEED;
+float calc_vel_x = 0;
+
+int vel_y = HDD_ZERO_SPEED;
+float calc_vel_y = 0;
+
 uint8_t mode = 0;
 
 // ================================================================
@@ -324,8 +332,8 @@ void setup() {
     attach_halls();
 
     //Init HDD
-    hdd.init();
-    hdd2.init();
+    hddx.init();
+    hddy.init();
     Serial.println("HDD ready!");
 }
 
@@ -611,6 +619,8 @@ float getNumber(uint8_t byte1, uint8_t byte2, uint8_t byte3)
 
 float saturate(float data, int16_t MIN, int16_t MAX)
 {
+    // ---------------------------------------------------------------------------------CHECK!!!!!!!!!!!!!!!!!!!!!!!!!-------------------------------------
+    return data;
     if (data>MAX)
         return MAX;
     else if (data<MIN)
@@ -690,22 +700,21 @@ void main_behavior()
   /* test behavior */
   if (mode == 0)
   {
-    hdd.rotate(vel);
-    hdd2.rotate(vel);
+    hddx.rotate(vel_x);
+    hddy.rotate(vel_y);
   }
   else if (mode == 1)
   {
-    hdd.rotate(calc_vel);
-    hdd2.rotate(calc_vel);
+    hddx.rotate(calc_vel_x);
+    hddy.rotate(calc_vel_y);
   }
 
   //Calcs
-  calc_vel = Output;
+  calc_vel_x = Output;
+  calc_vel_y = Output;
 
   if(Serial2.available() >= 1)
   {
-    /*new_vel = Serial2.parseInt(); //Leer un entero por serial
-    Serial.print("cmd: ");Serial.println(new_vel);*/
     uint8_t frame[13];
     float command[4];
     read(frame);
@@ -715,9 +724,10 @@ void main_behavior()
     if(command[0]==SET_SPEED)
     {
       mode = 0;
-      vel = command[1];
+      vel_x = command[1];
+      vel_y = command[2];
       Serial.print("New speed set: ");
-      Serial.println(vel);
+      Serial.print(vel_x);Serial.print(",");Serial.println(vel_y);
     }
     else if (command[0]==KEEP_ATTITUDE)
     {
@@ -732,22 +742,42 @@ void main_behavior()
     else if (command[0]==STOP)
     {
       mode = 0;
-      vel = 0;
-      hdd.idle();
-      hdd2.idle();
+      vel_x = HDD_ZERO_SPEED;
+      vel_y = HDD_ZERO_SPEED;
+      hddx.idle();
+      hddy.idle();
       Serial.println("Motor Stoped");
+    }
+    else if (command[0]==STOP_X)
+    {
+      mode = 0;
+      vel_x = HDD_ZERO_SPEED;
+      hddx.idle();
+      Serial.println("Motor X Stoped");
+    }
+    else if (command[0]==STOP_Y)
+    {
+      mode = 0;
+      vel_y = HDD_ZERO_SPEED;
+      hddy.idle();
+      Serial.println("Motor Y Stoped");
     }
     else if (command[0]==PRINT_SPEED)
     {
-      Serial.print("Motor speed: ");
-      if (mode == 0) Serial.println(vel);
-      else if (mode == 1) Serial.println(calc_vel);
+        Serial.print("Motor speed: ");
+        if (mode == 0){
+        Serial.print(vel_x);Serial.print(",");Serial.println(vel_y);
+        }
+        else if (mode == 1){
+            Serial.print(calc_vel_x);Serial.print(",");Serial.println(calc_vel_y);
+        }
     }
     else if (command[0] == AUTOMATIC_MODE)
     {
       mode = 1;
       Serial.print("Balance Mode");
-      Serial.print("Motor speed: "); Serial.println(vel);
+      Serial.print("Motor speed: ");
+      Serial.print(calc_vel_x);Serial.print(",");Serial.println(calc_vel_y);
     }
     else if (command[0] == USE_CURRENT_SETPOINT)
     {
