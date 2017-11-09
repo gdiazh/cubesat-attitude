@@ -85,7 +85,8 @@ void HddDriver::rotate(float velocity)
     // debug_port_->println(output_vars_.output_dir);
     if (output_vars_.output_dir == 1) digitalWrite(esc_dir_pin_, LOW);
     else digitalWrite(esc_dir_pin_, HIGH);
-    esc_.writeMicroseconds(output_vars_.output_pwm);
+    // esc_.writeMicroseconds(output_vars_.output_pwm);
+    esc_.writeMicroseconds((int) velocity);// ---------------------------------------------------------------------------------TEST!!!!!!!!!!!!!!!!!!!!!!!!!-------------------------------------
 }
 
 /*void HddDriver::printVariables(void)

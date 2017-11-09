@@ -162,6 +162,9 @@ void dmpDataReady() {
 #define DECREASE_SETPOINT 7
 #define PRINT_SPEED 8
 #define AUTOMATIC_MODE 9
+#define STOP_X 10
+#define STOP_Y 11
+#define STOP_Z 12
 
 float a;
 float b;
@@ -173,32 +176,37 @@ uint8_t t;
 
 /*Output pins for ESC control*/
 #define ESC_PWM_PIN_OUT 5
-#define ESC_DIR_PIN_OUT 4
+#define ESC_DIR_PIN_OUT A1
 
 #define ESC2_PWM_PIN_OUT 6
-#define ESC2_DIR_PIN_OUT 7
+#define ESC2_DIR_PIN_OUT A0
 
 #define ESC3_PWM_PIN_OUT 9
-#define ESC3_DIR_PIN_OUT 8
+// #define ESC3_DIR_PIN_OUT 
 
 #define OFSET 2.1
 
-/*Device Control Handler*/
-HddDriver hdd(ESC_PWM_PIN_OUT, ESC_DIR_PIN_OUT, 1300, 1850, &Serial);
-HddDriver hdd2(ESC2_PWM_PIN_OUT, ESC2_DIR_PIN_OUT, 1000, 1500, &Serial);
+#define HDD_ZERO_SPEED 1000
 
-int vel = 0;
-int new_vel = 0;
-float calc_vel = 0;
+/*Device Control Handler*/
+HddDriver hddx(ESC_PWM_PIN_OUT, ESC_DIR_PIN_OUT, 1300, 1850, &Serial);
+HddDriver hddy(ESC2_PWM_PIN_OUT, ESC2_DIR_PIN_OUT, 1000, 1500, &Serial);
+
+int vel_x = HDD_ZERO_SPEED;
+float calc_vel_x = 0;
+
+int vel_y = HDD_ZERO_SPEED;
+float calc_vel_y = 0;
+
 uint8_t mode = 0;
 
 // ================================================================
 // ===               Sensor PARAMS                              ===
 // ================================================================
 
-#define HALL1 2
-#define HALL2 16
-#define HALL3 17
+#define HALL1 10
+// #define HALL2 18
+// #define HALL3 19
 
 unsigned long time_ref = 0;
 volatile uint8_t steps = 0;
@@ -223,6 +231,7 @@ PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 // ===               Comunication                               ===
 // ================================================================
 uint8_t Timeout = 0;
+uint8_t data_id = 0;
 
 // ================================================================
 // ===                      INITIAL SETUP                       ===
@@ -243,10 +252,10 @@ void setup() {
     // initialize serial communication
     // (115200 chosen because it is required for Teapot Demo output, but it's
     // really up to you depending on your project)
-    // Serial.begin(115200);
     Serial.begin(115200);
+    // Serial.begin(115200);
     while (!Serial); // wait for Leonardo enumeration, others continue immediately
-    // while (!Serial2);
+    // while (!Serial);
 
     // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
     // Pro Mini running at 3.3v, cannot handle this baud rate reliably due to
@@ -319,12 +328,12 @@ void setup() {
     myPID.SetMode(AUTOMATIC);
 
     //Hall Encoder pins
-    pinMode(HALL3, INPUT);
+    pinMode(HALL1, INPUT);
     attach_halls();
 
     //Init HDD
-    hdd.init();
-    hdd2.init();
+    hddx.init();
+    hddy.init();
     // Serial.println("HDD ready!");
 }
 
@@ -380,26 +389,26 @@ void loop() {
         #ifdef OUTPUT_READABLE_QUATERNION
             // display quaternion values in easy matrix form: w x y z
             mpu.dmpGetQuaternion(&q, fifoBuffer);
-            // Serial.print("quat\t");
-            // Serial.print(q.w);
-            // Serial.print("\t");
-            // Serial.print(q.x);
-            // Serial.print("\t");
-            // Serial.print(q.y);
-            // Serial.print("\t");
-            // Serial.println(q.z);
+            /*Serial.print("quat\t");
+            Serial.print(q.w);
+            Serial.print("\t");
+            Serial.print(q.x);
+            Serial.print("\t");
+            Serial.print(q.y);
+            Serial.print("\t");
+            Serial.println(q.z);*/
         #endif
 
         #ifdef OUTPUT_READABLE_EULER
             // display Euler angles in degrees
             mpu.dmpGetQuaternion(&q, fifoBuffer);
             mpu.dmpGetEuler(euler, &q);
-            // Serial.print("euler\t");
-            // Serial.print(euler[0] * 180/M_PI);
-            // Serial.print("\t");
-            // Serial.print(euler[1] * 180/M_PI);
-            // Serial.print("\t");
-            // Serial.println(euler[2] * 180/M_PI);
+            /*Serial.print("euler\t");
+            Serial.print(euler[0] * 180/M_PI);
+            Serial.print("\t");
+            Serial.print(euler[1] * 180/M_PI);
+            Serial.print("\t");
+            Serial.println(euler[2] * 180/M_PI);*/
         #endif
 
         #ifdef OUTPUT_READABLE_YAWPITCHROLL
@@ -421,12 +430,12 @@ void loop() {
             mpu.dmpGetAccel(&aa, fifoBuffer);
             mpu.dmpGetGravity(&gravity, &q);
             mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-            // Serial.print("areal\t");
-            // Serial.print(aaReal.x);
-            // Serial.print("\t");
-            // Serial.print(aaReal.y);
-            // Serial.print("\t");
-            // Serial.println(aaReal.z);
+            /*Serial.print("areal\t");
+            Serial.print(aaReal.x);
+            Serial.print("\t");
+            Serial.print(aaReal.y);
+            Serial.print("\t");
+            Serial.println(aaReal.z);*/
         #endif
 
         #ifdef OUTPUT_READABLE_WORLDACCEL
@@ -437,12 +446,12 @@ void loop() {
             mpu.dmpGetGravity(&gravity, &q);
             mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
             mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
-            // Serial.print("aworld\t");
-            // Serial.print(aaWorld.x);
-            // Serial.print("\t");
-            // Serial.print(aaWorld.y);
-            // Serial.print("\t");
-            // Serial.println(aaWorld.z);
+            /*Serial.print("aworld\t");
+            Serial.print(aaWorld.x);
+            Serial.print("\t");
+            Serial.print(aaWorld.y);
+            Serial.print("\t");
+            Serial.println(aaWorld.z);*/
         #endif
     
         #ifdef OUTPUT_TEAPOT
@@ -471,13 +480,19 @@ void loop() {
     Input = ypr[0] * 180/M_PI;
     myPID.Compute();
 
-    float var1 = Input;
-    float var2 = 0;
-    float var3 = speed_rpm;
-    float var4 = filtered_speed;
+    float var1 = Input;                 //yaw angle
+    float var2 = ypr[1] * 180/M_PI;     //pitch angle
+    float var3 = speed_rpm;             //wheel speed [rpm]
+    float var4 = filtered_speed;        //filtered wheel speed [rpm]
+
+    /*if (filtered_speed>=3000)
+    {
+        Serial.print("fs:"); Serial.println(filtered_speed);
+    }*/
 
     main_behavior();
-    send_data(var1, var2, var3, var4);
+    send_data(1, var1, var2, var3, var4);
+    // data_id +=1;
 }
 
 void sendFrame(uint8_t frame[], uint8_t sz)
@@ -506,9 +521,16 @@ void bytesEncode(float number, uint8_t encode_bytes[])
     encode_bytes[0] = NH;
     encode_bytes[1] = NL;
     encode_bytes[2] = SD;
+
+    /*if (NH>=11)
+    {
+        Serial.print("n:"); Serial.println(number);
+        Serial.print("p:"); Serial.print(int_part);Serial.print(",");Serial.println(decimal_part);
+        Serial.print("b:"); Serial.print(NH);Serial.print(",");Serial.print(NL);Serial.print(",");Serial.println(SD);
+    }*/
 }
 
-void encode(float data[], uint8_t packet[])
+void encode(uint8_t id, float data[], uint8_t packet[])
 {
     uint8_t num1_bytes[3];
     uint8_t num2_bytes[3];
@@ -519,56 +541,58 @@ void encode(float data[], uint8_t packet[])
     bytesEncode(data[2], num3_bytes);
     bytesEncode(data[3], num4_bytes);
 
-    packet[0] = num1_bytes[0];
-    packet[1] = num1_bytes[1];
-    packet[2] = num1_bytes[2];
+    packet[0] = id;
 
-    packet[3] = num2_bytes[0];
-    packet[4] = num2_bytes[1];
-    packet[5] = num2_bytes[2];
+    packet[1] = num1_bytes[0];
+    packet[2] = num1_bytes[1];
+    packet[3] = num1_bytes[2];
 
-    packet[6] = num3_bytes[0];
-    packet[7] = num3_bytes[1];
-    packet[8] = num3_bytes[2];
+    packet[4] = num2_bytes[0];
+    packet[5] = num2_bytes[1];
+    packet[6] = num2_bytes[2];
 
-    packet[9] = num4_bytes[0];
-    packet[10] = num4_bytes[1];
-    packet[11] = num4_bytes[2];
+    packet[7] = num3_bytes[0];
+    packet[8] = num3_bytes[1];
+    packet[9] = num3_bytes[2];
 
-    packet[12] = checksum(packet, 13);
+    packet[10] = num4_bytes[0];
+    packet[11] = num4_bytes[1];
+    packet[12] = num4_bytes[2];
+
+    packet[13] = checksum(packet, 14);
 }
 
 void printFrame(uint8_t frame[], uint8_t sz)
 {
-    // Serial.print("frame = [");
+    Serial.print("frame = [");
     for (int i = 0; i < sz-1; i++)
     {
-        // Serial.print(frame[i]);
-        // Serial.print(",");
+        Serial.print(frame[i]);
+        Serial.print(",");
     }
-    // Serial.print(frame[sz-1]);
-    // Serial.println("]");
+    Serial.print(frame[sz-1]);
+    Serial.println("]");
 }
 
 void printCommand(float com[], uint8_t sz)
 {
-    // Serial.print("command = [");
+    Serial.print("command = [");
     for (int i = 0; i < sz-1; i++)
     {
-        // Serial.print(com[i]);
-        // Serial.print(",");
+        Serial.print(com[i]);
+        Serial.print(",");
     }
-    // Serial.print(com[sz-1]);
-    // Serial.println("]");
+    Serial.print(com[sz-1]);
+    Serial.println("]");
 }
 
-void send_data(float D1, float D2, float D3, float D4)
+void send_data(uint8_t id, float D1, float D2, float D3, float D4)
 {
     float data[4] = {D1, D2, D3, D4};
-    uint8_t frame_test[13];
-    encode(data, frame_test);
-    sendFrame(frame_test, 13);
-    // printFrame(frame_test, 13);
+    uint8_t frame_test[14];
+    encode(id, data, frame_test);
+    sendFrame(frame_test, 14);
+    // printFrame(frame_test, 14);
 }
 
 void updateSetpoint(void)
@@ -595,6 +619,8 @@ float getNumber(uint8_t byte1, uint8_t byte2, uint8_t byte3)
 
 float saturate(float data, int16_t MIN, int16_t MAX)
 {
+    // ---------------------------------------------------------------------------------CHECK!!!!!!!!!!!!!!!!!!!!!!!!!-------------------------------------
+    return data;
     if (data>MAX)
         return MAX;
     else if (data<MIN)
@@ -641,13 +667,13 @@ uint8_t read(uint8_t frame[])
                 uint8_t chksm = checksum(frame, sz);
                 if (chksm == frame[sz-1] && chksm !=0)
                 {
-                    printFrame(frame, 13);
+                    // printFrame(frame, 13);
                     return 1; // packet received OK
                 }
                 else
                 {
                     // Bad checksum
-                    printFrame(frame, 13);
+                    // printFrame(frame, 13);
                     // Serial.println("Bad checksum");
                     for (uint8_t j = 0; j < sz-1; j++)
                     {
@@ -664,7 +690,7 @@ uint8_t read(uint8_t frame[])
     // Serial.println("Frame Lost");
     for (uint8_t j = 0; j < sz; j++) frame[j] = 0; // Reset packet
     // Timeout = 0;
-    while(Serial.available()) Serial.read();
+    // while(Serial.available()) Serial.read();
     return 0;
 }
 
@@ -674,22 +700,21 @@ void main_behavior()
   /* test behavior */
   if (mode == 0)
   {
-    hdd.rotate(vel);
-    hdd2.rotate(vel);
+    hddx.rotate(vel_x);
+    hddy.rotate(vel_y);
   }
   else if (mode == 1)
   {
-    hdd.rotate(calc_vel);
-    hdd2.rotate(calc_vel);
+    hddx.rotate(calc_vel_x);
+    hddy.rotate(calc_vel_y);
   }
 
   //Calcs
-  calc_vel = Output;
+  calc_vel_x = Output;
+  calc_vel_y = Output;
 
   if(Serial.available() >= 1)
   {
-    /*new_vel = Serial.parseInt(); //Leer un entero por serial
-    Serial.print("cmd: ");Serial.println(new_vel);*/
     uint8_t frame[13];
     float command[4];
     read(frame);
@@ -699,9 +724,10 @@ void main_behavior()
     if(command[0]==SET_SPEED)
     {
       mode = 0;
-      vel = command[1];
+      vel_x = command[1];
+      vel_y = command[2];
       // Serial.print("New speed set: ");
-      // Serial.println(vel);
+      // Serial.print(vel_x);Serial.print(",");Serial.println(vel_y);
     }
     else if (command[0]==KEEP_ATTITUDE)
     {
@@ -716,22 +742,42 @@ void main_behavior()
     else if (command[0]==STOP)
     {
       mode = 0;
-      vel = 0;
-      hdd.idle();
-      hdd2.idle();
+      vel_x = HDD_ZERO_SPEED;
+      vel_y = HDD_ZERO_SPEED;
+      hddx.idle();
+      hddy.idle();
       // Serial.println("Motor Stoped");
     }
-    else if (command[0]==PRINT_SPEED)
+    else if (command[0]==STOP_X)
     {
-      // Serial.print("Motor speed: ");
-      // if (mode == 0) Serial.println(vel);
-      // else if (mode == 1) Serial.println(calc_vel);
+      mode = 0;
+      vel_x = HDD_ZERO_SPEED;
+      hddx.idle();
+      // Serial.println("Motor X Stoped");
     }
+    else if (command[0]==STOP_Y)
+    {
+      mode = 0;
+      vel_y = HDD_ZERO_SPEED;
+      hddy.idle();
+      // Serial.println("Motor Y Stoped");
+    }
+    /*else if (command[0]==PRINT_SPEED)
+    {
+        // Serial.print("Motor speed: ");
+        if (mode == 0){
+        Serial.print(vel_x);Serial.print(",");Serial.println(vel_y);
+        }
+        else if (mode == 1){
+            Serial.print(calc_vel_x);Serial.print(",");Serial.println(calc_vel_y);
+        }
+    }*/
     else if (command[0] == AUTOMATIC_MODE)
     {
       mode = 1;
       // Serial.print("Balance Mode");
-      // Serial.print("Motor speed: "); Serial.println(vel);
+      // Serial.print("Motor speed: ");
+      // Serial.print(calc_vel_x);Serial.print(",");Serial.println(calc_vel_y);
     }
     else if (command[0] == USE_CURRENT_SETPOINT)
     {
@@ -754,16 +800,16 @@ void main_behavior()
 
 void attach_halls(void)
 {
-    // attachInterrupt(digitalPinToInterrupt(HALL1), step, FALLING);
+    attachInterrupt(digitalPinToInterrupt(HALL1), step, FALLING);
     // attachInterrupt(digitalPinToInterrupt(HALL2), step, FALLING);
-    attachInterrupt(digitalPinToInterrupt(HALL3), step, FALLING);
+    // attachInterrupt(digitalPinToInterrupt(HALL3), step, FALLING);
 }
 
 void dettach_halls(void)
 {
-    // detachInterrupt(digitalPinToInterrupt(HALL1));
+    detachInterrupt(digitalPinToInterrupt(HALL1));
     // detachInterrupt(digitalPinToInterrupt(HALL2));
-    detachInterrupt(digitalPinToInterrupt(HALL3));
+    // detachInterrupt(digitalPinToInterrupt(HALL3));
 }
 
 void update_speed(void)
