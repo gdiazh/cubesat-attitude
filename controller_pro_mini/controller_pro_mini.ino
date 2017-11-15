@@ -204,7 +204,7 @@ uint8_t mode = 0;
 // ===               Sensor PARAMS                              ===
 // ================================================================
 
-#define HALL1 10
+#define HALL1 2
 // #define HALL2 18
 // #define HALL3 19
 
@@ -233,6 +233,15 @@ PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 uint8_t Timeout = 0;
 uint8_t data_id = 0;
 
+// ================================================================
+// ===               Current Sensor                             ===
+// ================================================================
+#define CURRENT_SENSOR A2
+float current = 0;
+float filtered_current = 0.0;
+
+float currentFilterFrecuency = 1; //[Hz]
+FilterOnePole currentlowpassFilter(LOWPASS, currentFilterFrecuency);
 // ================================================================
 // ===                      INITIAL SETUP                       ===
 // ================================================================
@@ -330,6 +339,10 @@ void setup() {
     //Hall Encoder pins
     pinMode(HALL1, INPUT);
     attach_halls();
+
+    //Current sensor
+    pinMode(CURRENT_SENSOR, INPUT);
+
 
     //Init HDD
     hddx.init();
@@ -477,12 +490,17 @@ void loop() {
     update_speed();
     filtered_speed = lowpassFilter.input(speed_rpm);
 
+    float current_raw = analogRead(CURRENT_SENSOR);
+    if (current_raw>=511) current = (current_raw-511)*0.06;
+    else current = 0;
+    filtered_current = currentlowpassFilter.input(current);
+
     Input = ypr[0] * 180/M_PI;
     myPID.Compute();
 
     float var1 = Input;                 //yaw angle
     float var2 = ypr[1] * 180/M_PI;     //pitch angle
-    float var3 = speed_rpm;             //wheel speed [rpm]
+    float var3 = filtered_current;      //wheel speed [rpm]
     float var4 = filtered_speed;        //filtered wheel speed [rpm]
 
     /*if (filtered_speed>=3000)

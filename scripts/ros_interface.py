@@ -49,8 +49,8 @@ class BTRosInterface:
         self.speedZ_sub = rospy.Subscriber('/speed_z', Float32, self.set_speed_z)
         #publishers
         self.data1_pub = rospy.Publisher('/yaw', Float32, queue_size=70)
-        self.data2_pub = rospy.Publisher('/pid_vel', Float32, queue_size=70)
-        self.data3_pub = rospy.Publisher('/wheel_speed', Float32, queue_size=70)
+        self.data2_pub = rospy.Publisher('/pitch', Float32, queue_size=70)
+        self.data3_pub = rospy.Publisher('/current', Float32, queue_size=70)
         self.data4_pub = rospy.Publisher('/filtered_wheel_speed', Float32, queue_size=70)
         Thread(target=self.update_state).start()
 
