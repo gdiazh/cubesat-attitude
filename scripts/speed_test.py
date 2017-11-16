@@ -20,8 +20,8 @@ class SpeedTest:
         self.mode = "manual"
         self.speed = 1400
         self.step = 50
-        self.max_speed = 1800
-        self.setting_time = 25
+        self.max_speed = 2000
+        self.setting_time = 55
 
     def initialize(self):
         # Get params and allocate msgs

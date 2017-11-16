@@ -52,6 +52,9 @@ class BTRosInterface:
         self.data2_pub = rospy.Publisher('/pitch', Float32, queue_size=70)
         self.data3_pub = rospy.Publisher('/current', Float32, queue_size=70)
         self.data4_pub = rospy.Publisher('/filtered_wheel_speed', Float32, queue_size=70)
+
+        self.cmd_speedX_pub = rospy.Publisher('/cmd_speedX', Float32, queue_size=70)
+
         Thread(target=self.update_state).start()
 
     def stop(self):
@@ -106,13 +109,14 @@ class BTRosInterface:
                 if (packet[0]==1):
                     self.bt_receiver.reset()
                     #write data to file
-                    self.file_manager.save_data(packet)
+                    self.file_manager.save_data(packet, self.speed)
                     #publish data
                     data = self.file_manager.decode(packet)
                     self.data1_pub.publish(data[0])
                     self.data2_pub.publish(data[1])
                     self.data3_pub.publish(data[2])
                     self.data4_pub.publish(data[3])
+                    self.cmd_speedX_pub.publish(self.speed[0])
             rate.sleep()
 
 if __name__ == '__main__':

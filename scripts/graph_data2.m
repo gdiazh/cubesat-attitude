@@ -7,7 +7,7 @@
 close all;
 clc
 
-file_path = 'data/';
+file_path = 'motor_model_data/';
 file_name = input('file_name: ','s');
 file_ext = '.txt';
 full_name = strcat(file_path, file_name, file_ext);
@@ -119,7 +119,7 @@ while 1
 	% plot(fig1, var1, 'b')
 	plot(ax1, yaw_filt, 'b')
 	title('Angulo Yaw', 'fontsize', 10)
-	xlabel(ax1, 'Tiempo [s]', 'fontsize', 10); ylabel('Yaw [°]', 'fontsize', 10);
+	xlabel(ax1, 'Tiempo [s]', 'fontsize', 10); ylabel('Yaw [DEG]', 'fontsize', 10);
 	grid on
 	% ylim([min_var1-10 max_var1+10])
 	ylim([-10 300])
@@ -128,31 +128,31 @@ while 1
 	subplot(2,2,2)
 	% plot(fig1, var2, 'r')
 	plot(ax2, speed_ref, 'r')
-	title('Velocidad Requerida (Salida Controlador)', 'fontsize', 10)
-	xlabel(ax2, 'Tiempo [s]', 'fontsize', 10); ylabel('Velocidad [RPM]', 'fontsize', 10);
+	title('Angulo Pitch', 'fontsize', 10)
+	xlabel(ax2, 'Tiempo [s]', 'fontsize', 10); ylabel('Pitch [DEG]', 'fontsize', 10);
 	grid on
 	% ylim([min_var2-10 max_var2+10])
-	ylim([-600 600])
+	ylim([-10 300])
 	% xlim([sz-window_sz sz+window_sz])
 
 	subplot(2,2,3)
 	% plot(fig1, var2, 'r')
 	plot(ax3, yaw_ref, 'g')
-	title('Velocidad Rueda', 'fontsize', 10)
-	xlabel(ax3, 'Tiempo [s]', 'fontsize', 10); ylabel('Ref Yaw [°]', 'fontsize', 10);
+	title('Corriente', 'fontsize', 10)
+	xlabel(ax3, 'Tiempo [s]', 'fontsize', 10); ylabel('Corriente [A]', 'fontsize', 10);
 	grid on
 	% ylim([min_var3-10 max_var3+10])
-	ylim([-10 5000])
+	ylim([0 1])
 	% xlim([sz-window_sz sz+window_sz])
 
 	subplot(2,2,4)
 	% plot(fig1, var2, 'r')
 	plot(ax4, wheel_speed_filt, 'k')
 	title('Velocidad Rueda Filtrada', 'fontsize', 10)
-	xlabel(ax4, 'Tiempo [s]', 'fontsize', 10); ylabel('Velocidad Rueda [RPM]', 'fontsize', 10);
+	xlabel(ax4, 'Tiempo [s]', 'fontsize', 10); ylabel('Velocidad Rueda [RPM-NC]', 'fontsize', 10);
 	grid on
 	% ylim([min_var4-10 max_var4+10])
-	ylim([-10 5000])
+	ylim([0 15000])
 	% xlim([sz-window_sz sz+window_sz])
 
 	pause(1)
