@@ -36,15 +36,16 @@ void HddDriver::init_esc()
     delay(5000);           //necesary to init the ESC
 }
 
-int HddDriver::pwm_modulation(float vel_control)
+int HddDriver::voltage_to_pwm(float volage)
 {
-    int pwm_duty_cycle = (int) torque2pwm(vel_control, min_pwm_, max_pwm_);
-    return pwm_duty_cycle;
+    float pwm = 58.8536*volage*volage-205.0240*volage+1618.0829;
+    int pwm_ms = (int) pwm;
+    return pwm_ms;
 }
 
-uint8_t HddDriver::direction_handler(float vel_control)
+uint8_t HddDriver::direction_handler(float volage)
 {
-    if (vel_control>=0) return 1;
+    if (volage>=0) return 1;
     else return 0;
 }
 
@@ -60,12 +61,12 @@ void HddDriver::init(void)
 
     /*initialize state variables*/
     state_vars_.hdd_angle = 0;       //[rad/s]
-    state_vars_.hdd_vel = 0;      //[rad/s]
+    state_vars_.hdd_vel = 0;         //[rad/s]
 
     // initialize output variables
-    output_vars_.output_vel = 0;     //[RPM]
-    output_vars_.output_pwm = 1000;  //[us]
-    output_vars_.output_dir = 0;     //[0:right, 1:left]
+    output_vars_.output_voltage = 0;     //[V]
+    output_vars_.output_pwm = 1000;      //[us]
+    output_vars_.output_dir = 0;         //[0:right, 1:left]
 }
 
 void HddDriver::idle()
@@ -73,20 +74,20 @@ void HddDriver::idle()
     esc_.writeMicroseconds(1000);
 }
 
-void HddDriver::rotate(float velocity)
+void HddDriver::rotate(float volage)
 {
-    output_vars_.output_vel = velocity;
-    output_vars_.output_pwm = pwm_modulation(output_vars_.output_vel);
-    output_vars_.output_dir = direction_handler(output_vars_.output_vel);
+    output_vars_.output_voltage = volage;
+    output_vars_.output_pwm = voltage_to_pwm(output_vars_.output_voltage);
+    output_vars_.output_dir = direction_handler(output_vars_.output_voltage);
     /*Update outputs*/
-    // debug_port_->print("output_vel: ");
-    // debug_port_->println(output_vars_.output_vel);
+    // debug_port_->print("output_voltage: ");
+    // debug_port_->println(output_vars_.output_voltage);
     // debug_port_->print("output_dir: ");
     // debug_port_->println(output_vars_.output_dir);
     if (output_vars_.output_dir == 1) digitalWrite(esc_dir_pin_, LOW);
     else digitalWrite(esc_dir_pin_, HIGH);
-    // esc_.writeMicroseconds(output_vars_.output_pwm);
-    esc_.writeMicroseconds((int) velocity);// ---------------------------------------------------------------------------------TEST!!!!!!!!!!!!!!!!!!!!!!!!!-------------------------------------
+    if (output_vars_.output_pwm>=1000 && output_vars_.output_pwm<=2000) esc_.writeMicroseconds(output_vars_.output_pwm);
+    // esc_.writeMicroseconds((int) velocity);// ---------------------------------------------------------------------------------TEST!!!!!!!!!!!!!!!!!!!!!!!!!-------------------------------------
 }
 
 /*void HddDriver::printVariables(void)
@@ -95,7 +96,7 @@ void HddDriver::rotate(float velocity)
     debug_port_->print(";");
     debug_port_->print(state_vars_.hdd_vel*RAD_A_DEG);
     debug_port_->print(";");
-    debug_port_->print(output_vars_.output_vel);
+    debug_port_->print(output_vars_.output_voltage);
     debug_port_->print(";");
     debug_port_->print(output_vars_.output_pwm);
     debug_port_->print(";");

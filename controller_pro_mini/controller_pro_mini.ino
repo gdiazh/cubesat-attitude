@@ -192,7 +192,7 @@ uint8_t t;
 HddDriver hddx(ESC_PWM_PIN_OUT, ESC_DIR_PIN_OUT, 1300, 1850, &Serial);
 HddDriver hddy(ESC2_PWM_PIN_OUT, ESC2_DIR_PIN_OUT, 1000, 1500, &Serial);
 
-int vel_x = HDD_ZERO_SPEED;
+float vel_x = HDD_ZERO_SPEED;
 float calc_vel_x = 0;
 
 int vel_y = HDD_ZERO_SPEED;
@@ -212,6 +212,7 @@ unsigned long time_ref = 0;
 volatile uint8_t steps = 0;
 float speed_rpm = 0.0;
 float filtered_speed = 0.0;
+float filtered_speed_calib = 0.0;
 
 float speedFilterFrecuency = 1; //[Hz]
 FilterOnePole lowpassFilter(LOWPASS, speedFilterFrecuency);
@@ -489,6 +490,8 @@ void loop() {
     // updateSetpoint();
     update_speed();
     filtered_speed = lowpassFilter.input(speed_rpm);
+    if (vel_x>=0) filtered_speed_calib = filtered_speed*0.68+870;
+    else filtered_speed_calib = -(filtered_speed*0.68+870);
 
     float current_raw = analogRead(CURRENT_SENSOR);
     if (current_raw>=511) current = (current_raw-511)*0.06;
@@ -501,7 +504,7 @@ void loop() {
     float var1 = Input;                 //yaw angle
     float var2 = ypr[1] * 180/M_PI;     //pitch angle
     float var3 = filtered_current;      //wheel speed [rpm]
-    float var4 = filtered_speed;        //filtered wheel speed [rpm]
+    float var4 = filtered_speed_calib;  //filtered wheel speed [rpm]
 
     /*if (filtered_speed>=3000)
     {

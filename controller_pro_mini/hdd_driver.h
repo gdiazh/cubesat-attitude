@@ -24,7 +24,7 @@ typedef struct StateVariables{
 } StateVariables;
 
 typedef struct OutputVariables{
-    float output_vel;
+    float output_voltage;
     float output_pwm;
     int output_dir;
 } OutputVariables;
@@ -73,7 +73,7 @@ public:
     void init(void);
     void idle();
     void init_esc();
-    void rotate(float vel);
+    void rotate(float voltage);
     // void printVariables(void);
 
 private:
@@ -84,6 +84,6 @@ private:
 
     // Declaration of Output Handlers
     float motor_dynamic(float torque);
-    int pwm_modulation(float vel_control);
-    uint8_t direction_handler(float vel_control);
+    int voltage_to_pwm(float voltage);
+    uint8_t direction_handler(float voltage);
 };
