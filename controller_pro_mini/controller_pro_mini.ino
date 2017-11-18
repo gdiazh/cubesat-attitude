@@ -155,21 +155,19 @@ void dmpDataReady() {
 // ================================================================
 
 #define SET_VOLTAGE 1
-#define KEEP_ATTITUDE 2
-#define SET_MODE 3
-#define STOP 4
-#define USE_CURRENT_SETPOINT 5
-#define INCREASE_SETPOINT 6
-#define DECREASE_SETPOINT 7
-#define PRINT_SPEED 8
-#define AUTOMATIC_MODE 9
-#define STOP_X 10
-#define STOP_Y 11
-#define STOP_Z 12
-
-float a;
-float b;
-uint8_t t;
+#define SET_TORQUE 2
+#define SET_SPEED 3
+#define KEEP_ATTITUDE 4
+#define SET_MODE 5
+#define STOP 6
+#define USE_CURRENT_SETPOINT 7
+#define INCREASE_SETPOINT 8
+#define DECREASE_SETPOINT 9
+#define PRINT_SPEED 10
+#define AUTOMATIC_MODE 11
+#define STOP_X 12
+#define STOP_Y 13
+#define STOP_Z 14
 
 // ================================================================
 // ===               Actuators params                           ===
@@ -193,12 +191,14 @@ HddDriver hddy(ESC2_PWM_PIN_OUT, ESC2_DIR_PIN_OUT, 1000, 2000, &Serial);
 
 float cmdVoltageMx = HDD_ZERO_SPEED;
 float cmdTorqueMx = 0;
+float cmdSpeedMx = 0;
 
 float cmdVoltageMy = HDD_ZERO_SPEED;
 float cmdTorqueMy = 0;
+float cmdSpeedMy = 0;
 
-#define TorqueMode 0
-#define SpeedMode 1
+#define TORQUE_MODE 0
+#define SPEED_MODE 1
 
 uint8_t mode = 0;
 uint8_t controlMode = 0;
@@ -253,9 +253,6 @@ FilterOnePole currentlowpassFilter(LOWPASS, currentFilterFrecuency);
 // ================================================================
 
 void setup() {
-    a = 0;
-    b = 0;
-    t = 0;
     // join I2C bus (I2Cdev library doesn't do this automatically)
     #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
         Wire.begin();
@@ -318,14 +315,14 @@ void setup() {
 
     // Speed Controller Initialization
     speedInputMx = 0;
-    speedSetpointMx = 0.0;						//[RPM]
-    speedControllerMx.SetOutputLimits(-10, 10);	//[Nm]
+    speedSetpointMx = 0.0;                      //[RPM]
+    speedControllerMx.SetOutputLimits(-10, 10); //[Nm]
     speedControllerMx.SetMode(AUTOMATIC);
 
     // Current Controller Initialization
     currentInputMx = 0;
-    currentSetpointMx = 0.0;						//[A]
-    currentControllerMx.SetOutputLimits(-5, 5);	//[V]
+    currentSetpointMx = 0.0;                        //[A]
+    currentControllerMx.SetOutputLimits(-5, 5); //[V]
     currentControllerMx.SetMode(AUTOMATIC);
 
     //Hall Encoder pins
@@ -479,45 +476,49 @@ void loop() {
 
     readCommands();
 
+    //Update Reference for Speed Controller
+    speedSetpointMx = cmdSpeedMx;
+    // speedSetpointMy = cmdSpeedMy;
+
     //Speed Calculation
     update_speed();
     filtered_speed = lowpassFilter.input(speed_rpm);
-    filtered_speed_calib = filtered_speed*0.68+870;				//[RPM]
+    filtered_speed_calib = filtered_speed*0.68+870;             //[RPM]
 
     //Speed Controller Calculation
     speedInputMx = filtered_speed_calib;
-    speedControllerMx.Compute();		//This update the controlTorqueMx variable
+    speedControllerMx.Compute();        //This update the controlTorqueMx variable
 
     //Update Reference for Current Controller
-    if (controlMode == SpeedMode)
+    if (controlMode == SPEED_MODE)
     {
-    	currentSetpointMx = controlTorqueMx/Km;
+        currentSetpointMx = controlTorqueMx/Km;
     }
-    else if (controlMode == TorqueMode)
+    else if (controlMode == TORQUE_MODE)
     {
-    	currentSetpointMx = cmdTorqueMx/Km;
+        currentSetpointMx = cmdTorqueMx/Km;
     }
 
     //Current Calculation
     float current_raw = analogRead(CURRENT_SENSOR);
     if (current_raw>=511) current = (current_raw-511)*0.06;
     else current = 0;
-    filtered_current = currentlowpassFilter.input(current);		//[A]
+    filtered_current = currentlowpassFilter.input(current);     //[A]
 
     //Current Controller Calculation
     currentInputMx = filtered_current;
-    currentControllerMx.Compute();		//This update the controlVoltageMx variable
+    currentControllerMx.Compute();      //This update the controlVoltageMx variable
 
     //Set Motor Voltage Based on Operation Mode
-    if (mode == 0)		//Open Loop
-  	{
-	    hddx.rotate(cmdVoltageMx);
-	    hddy.rotate(cmdVoltageMy);
-  	}
-    else if (mode == 1)	//Close Loop
+    if (mode == 0)      //Open Loop
     {
-	    hddx.rotate(controlVoltageMx);
-	    hddy.rotate(cmdVoltageMy);
+        hddx.rotate(cmdVoltageMx);
+        hddy.rotate(cmdVoltageMy);
+    }
+    else if (mode == 1) //Close Loop
+    {
+        hddx.rotate(controlVoltageMx);
+        hddy.rotate(cmdVoltageMy);
     }
     send_data(1, ypr[0]*180/M_PI, ypr[1]*180/M_PI, filtered_current, filtered_speed_calib);
 }
@@ -700,6 +701,16 @@ void readCommands()
       cmdVoltageMx = command[1];
       cmdVoltageMy = command[2];
     }
+    else if(command[0]==SET_TORQUE)
+    {
+      cmdTorqueMx = command[1];
+      cmdTorqueMy = command[2];
+    }
+    else if(command[0]==SET_SPEED)
+    {
+      cmdSpeedMx = command[1];
+      cmdSpeedMy = command[2];
+    }
     /*else if (command[0]==KEEP_ATTITUDE)
     {
       cmdYawSetpoint = command[1];
@@ -732,7 +743,7 @@ void readCommands()
     }
     /*else if (command[0]==PRINT_SPEED)
     {
-    	TODO: send speed
+        TODO: send speed
     }*/
     else if (command[0] == AUTOMATIC_MODE)
     {

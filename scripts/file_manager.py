@@ -137,13 +137,22 @@ class fileManager(object):
         self.data_file.write("\n")
         self.data_file.close()
 
-    def save_data(self, packet, speed_ref):
+    def save_data(self, packet, speed_ref, torque_ref, voltage_ref):
         data = self.decode(packet)
         data.append(speed_ref[0])
         data.append(speed_ref[1])
         data.append(speed_ref[2])
+
+        data.append(torque_ref[0])
+        data.append(torque_ref[1])
+        data.append(torque_ref[2])
+
+        data.append(voltage_ref[0])
+        data.append(voltage_ref[1])
+        data.append(voltage_ref[2])
+
         self.DEBUG_PRINT("info", "Data = "+str(data))
-        self.to_file(data, 7)
+        self.to_file(data, 13)
 
 
 if __name__ == '__main__':

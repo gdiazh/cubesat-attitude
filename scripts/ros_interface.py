@@ -28,8 +28,10 @@ class BTRosInterface:
         self.file_manager = fileManager(test_name, debug = True)
         self.command_parser = CommandParser()
         self.mode = "manual"
-        self.attitude = [0,0,0]     #[ypr]
-        self.speed = [HDD_ZERO_SPEED,HDD_ZERO_SPEED,HDD_ZERO_SPEED]              #[RPM]
+        self.attitude = [0,0,0]                                         #[ypr]  [DEG]
+        self.speed = [HDD_ZERO_SPEED,HDD_ZERO_SPEED,HDD_ZERO_SPEED]     #[xyz]  [RPM]
+        self.torque = [0,0,0]                                           #[xyz]  [Nm]
+        self.voltage = [0,0,0]                                          #[xyz]  [V]
 
     def initialize(self):
         # Get params and allocate msgs
@@ -40,13 +42,25 @@ class BTRosInterface:
     def start(self):
         # Create subs, services, publishers, threads
         self.running = True
+
         #subscribers
         self.command_sub = rospy.Subscriber('/controller_command', String, self.process_command)
-        self.speed_sub = rospy.Subscriber('/mode', String, self.set_mode)
-        self.speed_sub = rospy.Subscriber('/attitude', Float32MultiArray, self.set_attitude)
+        self.mode_sub = rospy.Subscriber('/mode', String, self.set_mode)
+        
+        self.attitude_sub = rospy.Subscriber('/attitude', Float32MultiArray, self.set_attitude)
+        
         self.speedX_sub = rospy.Subscriber('/speed_x', Float32, self.set_speed_x)
         self.speedY_sub = rospy.Subscriber('/speed_y', Float32, self.set_speed_y)
         self.speedZ_sub = rospy.Subscriber('/speed_z', Float32, self.set_speed_z)
+        
+        self.torqueX_sub = rospy.Subscriber('/torque_x', Float32, self.set_torque_x)
+        self.torqueY_sub = rospy.Subscriber('/torque_y', Float32, self.set_torque_y)
+        self.torqueZ_sub = rospy.Subscriber('/torque_z', Float32, self.set_torque_z)
+        
+        self.voltageX_sub = rospy.Subscriber('/voltage_x', Float32, self.set_voltage_x)
+        self.voltageY_sub = rospy.Subscriber('/voltage_y', Float32, self.set_voltage_y)
+        self.voltageZ_sub = rospy.Subscriber('/voltage_z', Float32, self.set_voltage_z)
+
         #publishers
         self.data1_pub = rospy.Publisher('/yaw', Float32, queue_size=70)
         self.data2_pub = rospy.Publisher('/pitch', Float32, queue_size=70)
@@ -54,19 +68,40 @@ class BTRosInterface:
         self.data4_pub = rospy.Publisher('/filtered_wheel_speed', Float32, queue_size=70)
 
         self.cmd_speedX_pub = rospy.Publisher('/cmd_speedX', Float32, queue_size=70)
+        self.cmd_torqueX_pub = rospy.Publisher('/cmd_torqueX', Float32, queue_size=70)
+        self.cmd_voltageX_pub = rospy.Publisher('/cmd_voltageX', Float32, queue_size=70)
 
         Thread(target=self.update_state).start()
 
     def stop(self):
         self.running = False
+        
         self.command_sub.unregister()
+        self.mode_sub
+        
+        self.attitude_sub
+
         self.speedX_sub.unregister()
         self.speedY_sub.unregister()
         self.speedZ_sub.unregister()
+
+        self.torqueX_sub
+        self.torqueY_sub
+        self.torqueZ_sub
+
+        self.voltageX_sub
+        self.voltageY_sub
+        self.voltageZ_sub
+
         self.data1_pub.unregister()
         self.data2_pub.unregister()
         self.data3_pub.unregister()
         self.data4_pub.unregister()
+
+        self.cmd_speedX_pub
+        self.cmd_torqueX_pub
+        self.cmd_voltageX_pub
+
         self.bt_receiver.stop()
         self.file_manager.stop()
 
@@ -85,13 +120,31 @@ class BTRosInterface:
     def set_speed_z(self, msg):
         self.speed[2] = msg.data
 
+    def set_torque_x(self, msg):
+        self.torque[0] = msg.data
+
+    def set_torque_y(self, msg):
+        self.torque[1] = msg.data
+
+    def set_torque_z(self, msg):
+        self.torque[2] = msg.data
+
+    def set_voltage_x(self, msg):
+        self.voltage[0] = msg.data
+
+    def set_voltage_y(self, msg):
+        self.voltage[1] = msg.data
+
+    def set_voltage_z(self, msg):
+        self.voltage[2] = msg.data
+
     def process_command(self, msg):
         print "msg to send:"+msg.data
         if (msg.data == "end") :
             self.running = False
             return
         else:
-            args = [self.mode, self.attitude, self.speed]
+            args = [self.mode, self.attitude, self.speed, self.torque, self.voltage]
             command_code = self.command_parser.parse_command(msg.data, args)
             if (command_code!=[-1,-1,-1,-1]):
                 frame = self.file_manager.encode(command_code)
@@ -109,7 +162,7 @@ class BTRosInterface:
                 if (packet[0]==1):
                     self.bt_receiver.reset()
                     #write data to file
-                    self.file_manager.save_data(packet, self.speed)
+                    self.file_manager.save_data(packet, self.speed, self.torque, self.speed)
                     #publish data
                     data = self.file_manager.decode(packet)
                     self.data1_pub.publish(data[0])
@@ -117,11 +170,13 @@ class BTRosInterface:
                     self.data3_pub.publish(data[2])
                     self.data4_pub.publish(data[3])
                     self.cmd_speedX_pub.publish(self.speed[0])
+                    self.cmd_torqueX_pub.publish(self.torque[0])
+                    self.cmd_voltageX_pub.publish(self.voltage[0])
             rate.sleep()
 
 if __name__ == '__main__':
     test_name = raw_input("test_name: ")
-    rospy.init_node('bt_interface')
+    rospy.init_node('ros_bt_interface')
     bt_ros = BTRosInterface(test_name)
     bt_ros.initialize()
     bt_ros.start()
