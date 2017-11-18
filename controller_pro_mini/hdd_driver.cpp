@@ -86,7 +86,7 @@ void HddDriver::rotate(float volage)
     // debug_port_->println(output_vars_.output_dir);
     if (output_vars_.output_dir == 1) digitalWrite(esc_dir_pin_, LOW);
     else digitalWrite(esc_dir_pin_, HIGH);
-    if (output_vars_.output_pwm>=1000 && output_vars_.output_pwm<=2000) esc_.writeMicroseconds(output_vars_.output_pwm);
+    if (output_vars_.output_pwm>=min_pwm_ && output_vars_.output_pwm<=max_pwm_) esc_.writeMicroseconds(output_vars_.output_pwm);
     // esc_.writeMicroseconds((int) velocity);// ---------------------------------------------------------------------------------TEST!!!!!!!!!!!!!!!!!!!!!!!!!-------------------------------------
 }
 

@@ -38,10 +38,11 @@ THE SOFTWARE.
 #include <PID_v1.h>
 
 /**
- * @brief Arduino Driver v2.0 to control yaw angle position using DMP6 example
+ * @brief Arduino Driver for Satellite Attitude Control
+   @Author: Gustavo Diaz
  */
  
-/*Modification to DMP example: Gustavo Diaz*/
+/*This code use DMP example for the Attitude Determination*/
 
 /*Requiered Libraries*/
 #include "hdd_driver.h"
@@ -153,7 +154,7 @@ void dmpDataReady() {
 // ===               FRAME TEST PARAMS                          ===
 // ================================================================
 
-#define SET_SPEED 1
+#define SET_VOLTAGE 1
 #define KEEP_ATTITUDE 2
 #define SET_MODE 3
 #define STOP 4
@@ -184,21 +185,23 @@ uint8_t t;
 #define ESC3_PWM_PIN_OUT 9
 // #define ESC3_DIR_PIN_OUT 
 
-#define OFSET 2.1
-
 #define HDD_ZERO_SPEED 1000
 
 /*Device Control Handler*/
-HddDriver hddx(ESC_PWM_PIN_OUT, ESC_DIR_PIN_OUT, 1300, 1850, &Serial);
-HddDriver hddy(ESC2_PWM_PIN_OUT, ESC2_DIR_PIN_OUT, 1000, 1500, &Serial);
+HddDriver hddx(ESC_PWM_PIN_OUT, ESC_DIR_PIN_OUT, 1000, 2000, &Serial);
+HddDriver hddy(ESC2_PWM_PIN_OUT, ESC2_DIR_PIN_OUT, 1000, 2000, &Serial);
 
-float vel_x = HDD_ZERO_SPEED;
-float calc_vel_x = 0;
+float cmdVoltageMx = HDD_ZERO_SPEED;
+float cmdTorqueMx = 0;
 
-int vel_y = HDD_ZERO_SPEED;
-float calc_vel_y = 0;
+float cmdVoltageMy = HDD_ZERO_SPEED;
+float cmdTorqueMy = 0;
+
+#define TorqueMode 0
+#define SpeedMode 1
 
 uint8_t mode = 0;
+uint8_t controlMode = 0;
 
 // ================================================================
 // ===               Sensor PARAMS                              ===
@@ -212,21 +215,23 @@ unsigned long time_ref = 0;
 volatile uint8_t steps = 0;
 float speed_rpm = 0.0;
 float filtered_speed = 0.0;
-float filtered_speed_calib = 0.0;
-
 float speedFilterFrecuency = 1; //[Hz]
 FilterOnePole lowpassFilter(LOWPASS, speedFilterFrecuency);
+float filtered_speed_calib = 0.0;
 
 // ================================================================
-// ===               PID PARAMS                                 ===
+// ===       PID Speed Controller PARAMS                        ===
 // ================================================================
+double speedSetpointMx, speedInputMx, controlTorqueMx;
+double Kp_wx=5, Ki_wx=1, Kd_wx=1;
+PID speedControllerMx(&speedInputMx, &controlTorqueMx, &speedSetpointMx, Kp_wx, Ki_wx, Kd_wx, DIRECT);
 
-//Define Variables we'll be connecting to
-double Setpoint, Input, Output;
-
-//Specify the links and initial tuning parameters
-double Kp=5, Ki=1, Kd=1;
-PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
+// ================================================================
+// ===       PID Current Controller PARAMS, Motor x             ===
+// ================================================================
+double currentSetpointMx, currentInputMx, controlVoltageMx;
+double Kp_imx=10, Ki_imx=1, Kd_imx=1;
+PID currentControllerMx(&currentInputMx, &controlVoltageMx, &currentSetpointMx, Kp_imx, Ki_imx, Kd_imx, DIRECT);
 
 // ================================================================
 // ===               Comunication                               ===
@@ -240,9 +245,9 @@ uint8_t data_id = 0;
 #define CURRENT_SENSOR A2
 float current = 0;
 float filtered_current = 0.0;
-
 float currentFilterFrecuency = 1; //[Hz]
 FilterOnePole currentlowpassFilter(LOWPASS, currentFilterFrecuency);
+
 // ================================================================
 // ===                      INITIAL SETUP                       ===
 // ================================================================
@@ -263,9 +268,7 @@ void setup() {
     // (115200 chosen because it is required for Teapot Demo output, but it's
     // really up to you depending on your project)
     Serial.begin(115200);
-    // Serial.begin(115200);
     while (!Serial); // wait for Leonardo enumeration, others continue immediately
-    // while (!Serial);
 
     // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
     // Pro Mini running at 3.3v, cannot handle this baud rate reliably due to
@@ -274,22 +277,10 @@ void setup() {
     // crystal solution for the UART timer.
 
     // initialize device
-    // Serial.println(F("Initializing I2C devices..."));
     mpu.initialize();
     pinMode(INTERRUPT_PIN, INPUT);
 
-    // verify connection
-    // Serial.println(F("Testing device connections..."));
-    // Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
-
-    // wait for ready
-    // Serial.println(F("\nSend any character to begin DMP programming and demo: "));
-    /*while (Serial.available() && Serial.read()); // empty buffer
-    while (!Serial.available());                 // wait for data
-    while (Serial.available() && Serial.read()); // empty buffer again*/
-
     // load and configure the DMP
-    // Serial.println(F("Initializing DMP..."));
     devStatus = mpu.dmpInitialize();
 
     // supply your own gyro offsets here, scaled for min sensitivity
@@ -301,16 +292,13 @@ void setup() {
     // make sure it worked (returns 0 if so)
     if (devStatus == 0) {
         // turn on the DMP, now that it's ready
-        // Serial.println(F("Enabling DMP..."));
         mpu.setDMPEnabled(true);
 
         // enable Arduino interrupt detection
-        // Serial.println(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
         attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), dmpDataReady, RISING);
         mpuIntStatus = mpu.getIntStatus();
 
         // set our DMP Ready flag so the main loop() function knows it's okay to use it
-        // Serial.println(F("DMP ready!"));
         dmpReady = true;
 
         // get expected DMP packet size for later comparison
@@ -328,14 +316,17 @@ void setup() {
     // configure LED for output
     pinMode(LED_PIN, OUTPUT);
 
-    // PID Initialization
-    //initialize the variables we're linked to
-    Input = 0;
-    Setpoint = -100.0;
-    myPID.SetOutputLimits(-700, 700);
+    // Speed Controller Initialization
+    speedInputMx = 0;
+    speedSetpointMx = 0.0;						//[RPM]
+    speedControllerMx.SetOutputLimits(-10, 10);	//[Nm]
+    speedControllerMx.SetMode(AUTOMATIC);
 
-    //turn the PID on
-    myPID.SetMode(AUTOMATIC);
+    // Current Controller Initialization
+    currentInputMx = 0;
+    currentSetpointMx = 0.0;						//[A]
+    currentControllerMx.SetOutputLimits(-5, 5);	//[V]
+    currentControllerMx.SetMode(AUTOMATIC);
 
     //Hall Encoder pins
     pinMode(HALL1, INPUT);
@@ -348,7 +339,6 @@ void setup() {
     //Init HDD
     hddx.init();
     hddy.init();
-    // Serial.println("HDD ready!");
 }
 
 
@@ -487,34 +477,52 @@ void loop() {
         digitalWrite(LED_PIN, blinkState);
     }
 
-    // updateSetpoint();
+    readCommands();
+
+    //Speed Calculation
     update_speed();
     filtered_speed = lowpassFilter.input(speed_rpm);
-    if (vel_x>=0) filtered_speed_calib = filtered_speed*0.68+870;
-    else filtered_speed_calib = -(filtered_speed*0.68+870);
+    filtered_speed_calib = filtered_speed*0.68+870;				//[RPM]
 
+    //Speed Controller Calculation
+    speedInputMx = filtered_speed_calib;
+    speedControllerMx.Compute();		//This update the controlTorqueMx variable
+
+    //Update Reference for Current Controller
+    if (controlMode == SpeedMode)
+    {
+    	currentSetpointMx = controlTorqueMx/Km;
+    }
+    else if (controlMode == TorqueMode)
+    {
+    	currentSetpointMx = cmdTorqueMx/Km;
+    }
+
+    //Current Calculation
     float current_raw = analogRead(CURRENT_SENSOR);
     if (current_raw>=511) current = (current_raw-511)*0.06;
     else current = 0;
-    filtered_current = currentlowpassFilter.input(current);
+    filtered_current = currentlowpassFilter.input(current);		//[A]
 
-    Input = ypr[0] * 180/M_PI;
-    myPID.Compute();
+    //Current Controller Calculation
+    currentInputMx = filtered_current;
+    currentControllerMx.Compute();		//This update the controlVoltageMx variable
 
-    float var1 = Input;                 //yaw angle
-    float var2 = ypr[1] * 180/M_PI;     //pitch angle
-    float var3 = filtered_current;      //wheel speed [rpm]
-    float var4 = filtered_speed_calib;  //filtered wheel speed [rpm]
-
-    /*if (filtered_speed>=3000)
+    //Set Motor Voltage Based on Operation Mode
+    if (mode == 0)		//Open Loop
+  	{
+	    hddx.rotate(cmdVoltageMx);
+	    hddy.rotate(cmdVoltageMy);
+  	}
+    else if (mode == 1)	//Close Loop
     {
-        Serial.print("fs:"); Serial.println(filtered_speed);
-    }*/
-
-    main_behavior();
-    send_data(1, var1, var2, var3, var4);
-    // data_id +=1;
+	    hddx.rotate(controlVoltageMx);
+	    hddy.rotate(cmdVoltageMy);
+    }
+    send_data(1, ypr[0]*180/M_PI, ypr[1]*180/M_PI, filtered_current, filtered_speed_calib);
 }
+
+//---------------Comunication Methos-------------------------------------------------------------
 
 void sendFrame(uint8_t frame[], uint8_t sz)
 {   
@@ -530,25 +538,18 @@ uint8_t checksum(uint8_t *packet, uint8_t n)
 
 void bytesEncode(float number, uint8_t encode_bytes[])
 {
-    uint16_t int_part = (uint16_t) abs(number);           //[0-65535]
+    uint16_t int_part = (uint16_t) abs(number);          //[0-65535]
     float decimal_part = (abs(number) - int_part)*100;   //[0-99]
 
     uint8_t NH = (int_part)>>8;                //Number High Byte
     uint8_t NL = (int_part) & 0x00FF;          //Number Low Byte
     uint8_t D = (int)decimal_part;             //Decimal part (7 bits)
-    uint8_t SD = D;                                 //Sign and Decimal Byte
-    if (number<=0) SD = D|0b10000000;               //Sign bit
+    uint8_t SD = D;                            //Sign and Decimal Byte
+    if (number<=0) SD = D|0b10000000;          //Sign bit
 
     encode_bytes[0] = NH;
     encode_bytes[1] = NL;
     encode_bytes[2] = SD;
-
-    /*if (NH>=11)
-    {
-        Serial.print("n:"); Serial.println(number);
-        Serial.print("p:"); Serial.print(int_part);Serial.print(",");Serial.println(decimal_part);
-        Serial.print("b:"); Serial.print(NH);Serial.print(",");Serial.print(NL);Serial.print(",");Serial.println(SD);
-    }*/
 }
 
 void encode(uint8_t id, float data[], uint8_t packet[])
@@ -595,18 +596,6 @@ void printFrame(uint8_t frame[], uint8_t sz)
     Serial.println("]");
 }
 
-void printCommand(float com[], uint8_t sz)
-{
-    Serial.print("command = [");
-    for (int i = 0; i < sz-1; i++)
-    {
-        Serial.print(com[i]);
-        Serial.print(",");
-    }
-    Serial.print(com[sz-1]);
-    Serial.println("]");
-}
-
 void send_data(uint8_t id, float D1, float D2, float D3, float D4)
 {
     float data[4] = {D1, D2, D3, D4};
@@ -614,15 +603,6 @@ void send_data(uint8_t id, float D1, float D2, float D3, float D4)
     encode(id, data, frame_test);
     sendFrame(frame_test, 14);
     // printFrame(frame_test, 14);
-}
-
-void updateSetpoint(void)
-{
-    if(Serial.available() >= 1)
-    {
-        Setpoint = Serial.parseInt();
-        // Serial.print("Setpoint = "); Serial.println(Setpoint);
-    }
 }
 
 float getNumber(uint8_t byte1, uint8_t byte2, uint8_t byte3)
@@ -660,7 +640,6 @@ void decode(uint8_t frame[], float data[])
 
 void stop_read(void)
 {
-    // Serial.print("Stop Read");
     // Timer1.detachInterrupt();
     Timeout = 1;
 }
@@ -670,32 +649,26 @@ uint8_t read(uint8_t frame[])
     uint8_t i = 0;
     uint8_t k = 0;
     uint8_t sz = 13;
-    // Serial.print("r");
     // Timer1.initialize(30000);
     // Timer1.attachInterrupt(stop_read);
     while (k < 2*sz)// and !Timeout)
     // while (Serial.available() >= 1)
     {
-        // Serial.print(">");
         if (Serial.available() >= 1)
         {
             uint8_t byte = Serial.read();
             frame[i] = byte;
-            // Serial.println(byte);
             i+=1;
             if (i==sz)
             {
                 uint8_t chksm = checksum(frame, sz);
                 if (chksm == frame[sz-1] && chksm !=0)
                 {
-                    // printFrame(frame, 13);
                     return 1; // packet received OK
                 }
                 else
                 {
                     // Bad checksum
-                    // printFrame(frame, 13);
-                    // Serial.println("Bad checksum");
                     for (uint8_t j = 0; j < sz-1; j++)
                     {
                         frame[j] = frame[j+1]; // Shift frame Left
@@ -708,117 +681,78 @@ uint8_t read(uint8_t frame[])
         }
     }
     // Frame not received Correctly
-    // Serial.println("Frame Lost");
     for (uint8_t j = 0; j < sz; j++) frame[j] = 0; // Reset packet
     // Timeout = 0;
     // while(Serial.available()) Serial.read();
     return 0;
 }
 
-void main_behavior()
+void readCommands()
 {
-  // Serial.println("M");
-  /* test behavior */
-  if (mode == 0)
-  {
-    hddx.rotate(vel_x);
-    hddy.rotate(vel_y);
-  }
-  else if (mode == 1)
-  {
-    hddx.rotate(calc_vel_x);
-    hddy.rotate(calc_vel_y);
-  }
-
-  //Calcs
-  calc_vel_x = Output;
-  calc_vel_y = Output;
-
   if(Serial.available() >= 1)
   {
     uint8_t frame[13];
     float command[4];
     read(frame);
     decode(frame, command);
-    // printFrame(frame, 13);
-    // printCommand(command, 4);
-    if(command[0]==SET_SPEED)
+    if(command[0]==SET_VOLTAGE)
     {
-      mode = 0;
-      vel_x = command[1];
-      vel_y = command[2];
-      // Serial.print("New speed set: ");
-      // Serial.print(vel_x);Serial.print(",");Serial.println(vel_y);
+      cmdVoltageMx = command[1];
+      cmdVoltageMy = command[2];
     }
-    else if (command[0]==KEEP_ATTITUDE)
+    /*else if (command[0]==KEEP_ATTITUDE)
     {
-      Setpoint = command[1];
-      // Serial.println("change set point");
-    }
+      cmdYawSetpoint = command[1];
+      cmdPitchSetpoint = command[2];
+      cmdRollSetpoint = command[3];
+    }*/
     else if (command[0]==SET_MODE)
     {
       mode = command[1];
-      // Serial.println("change mode");
     }
     else if (command[0]==STOP)
     {
       mode = 0;
-      vel_x = HDD_ZERO_SPEED;
-      vel_y = HDD_ZERO_SPEED;
+      cmdVoltageMx = HDD_ZERO_SPEED;
+      cmdVoltageMy = HDD_ZERO_SPEED;
       hddx.idle();
       hddy.idle();
-      // Serial.println("Motor Stoped");
     }
     else if (command[0]==STOP_X)
     {
       mode = 0;
-      vel_x = HDD_ZERO_SPEED;
+      cmdVoltageMx = HDD_ZERO_SPEED;
       hddx.idle();
-      // Serial.println("Motor X Stoped");
     }
     else if (command[0]==STOP_Y)
     {
       mode = 0;
-      vel_y = HDD_ZERO_SPEED;
+      cmdVoltageMy = HDD_ZERO_SPEED;
       hddy.idle();
-      // Serial.println("Motor Y Stoped");
     }
     /*else if (command[0]==PRINT_SPEED)
     {
-        // Serial.print("Motor speed: ");
-        if (mode == 0){
-        Serial.print(vel_x);Serial.print(",");Serial.println(vel_y);
-        }
-        else if (mode == 1){
-            Serial.print(calc_vel_x);Serial.print(",");Serial.println(calc_vel_y);
-        }
+    	TODO: send speed
     }*/
     else if (command[0] == AUTOMATIC_MODE)
     {
       mode = 1;
-      // Serial.print("Balance Mode");
-      // Serial.print("Motor speed: ");
-      // Serial.print(calc_vel_x);Serial.print(",");Serial.println(calc_vel_y);
     }
-    else if (command[0] == USE_CURRENT_SETPOINT)
+    /*else if (command[0] == USE_CURRENT_SETPOINT)
     {
-      Setpoint = Input;
-      // Serial.println("using current pos as setpoint");
-    }
-    else if (command[0] == INCREASE_SETPOINT)
+      cmdYawSetpoint = ypr[0]*180/M_PI;
+    }*/
+    /*else if (command[0] == INCREASE_SETPOINT)
     {
-      Setpoint = Setpoint+10;
-      // Serial.println("Increase setpoint");
+      cmdYawSetpoint+=10;
     }
     else if (command[0] == DECREASE_SETPOINT)
     {
-      Setpoint = Setpoint-10;
-      // Serial.println("decrease setpoint");
-    }
-    // Serial.print(Input); Serial.print("\t\t\t"); Serial.println(Output);
+      cmdYawSetpoint-=10;
+    }*/
   }
 }
-
+//---------------Sensor Methos-------------------------------------------------------------
 void attach_halls(void)
 {
     attachInterrupt(digitalPinToInterrupt(HALL1), step, FALLING);
