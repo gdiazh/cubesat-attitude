@@ -36,16 +36,21 @@ void HddDriver::init_esc()
     delay(5000);           //necesary to init the ESC
 }
 
-int HddDriver::voltage_to_pwm(float volage)
+int HddDriver::voltage_to_pwm(float voltage)
 {
-    float pwm = 58.8536*volage*volage-205.0240*volage+1618.0829;
+    float pwm = 58.8536*voltage*voltage-205.0240*voltage+1618.0829;
     int pwm_ms = (int) pwm;
-    return pwm_ms;
+    if (voltage>4.8)
+        return 2000;
+    else if (voltage<2)
+        return 1000;
+    else
+        return pwm_ms;
 }
 
-uint8_t HddDriver::direction_handler(float volage)
+uint8_t HddDriver::direction_handler(float voltage)
 {
-    if (volage>=0) return 1;
+    if (voltage>=0) return 1;
     else return 0;
 }
 
@@ -74,9 +79,9 @@ void HddDriver::idle()
     esc_.writeMicroseconds(1000);
 }
 
-void HddDriver::rotate(float volage)
+void HddDriver::rotate(float voltage)
 {
-    output_vars_.output_voltage = volage;
+    output_vars_.output_voltage = voltage;
     output_vars_.output_pwm = voltage_to_pwm(output_vars_.output_voltage);
     output_vars_.output_dir = direction_handler(output_vars_.output_voltage);
     /*Update outputs*/

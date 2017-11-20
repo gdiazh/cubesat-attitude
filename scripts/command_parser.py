@@ -22,6 +22,7 @@ STOP_Y = 13
 STOP_Z = 14
 
 HDD_ZERO_SPEED = 1000
+MIN_VOLTAGE = 0
 
 class CommandParser:
     def __init__(self):
@@ -44,7 +45,7 @@ class CommandParser:
         elif (command == "set-mode"):
             self.command_code = [SET_MODE, mode, 0, 0]
         elif (command == "stop"):
-            self.command_code = [STOP, HDD_ZERO_SPEED, HDD_ZERO_SPEED, HDD_ZERO_SPEED]
+            self.command_code = [STOP, MIN_VOLTAGE, MIN_VOLTAGE, MIN_VOLTAGE]
         elif (command == "use-current-setpoint"):
             self.command_code = [USE_CURRENT_SETPOINT, 0, 0, 0]
         elif (command == "increase-setpoint"):

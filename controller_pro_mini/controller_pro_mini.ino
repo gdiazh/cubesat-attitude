@@ -184,24 +184,27 @@ void dmpDataReady() {
 // #define ESC3_DIR_PIN_OUT 
 
 #define HDD_ZERO_SPEED 1000
+#define MIN_VOLTAGE 0.0
 
 /*Device Control Handler*/
 HddDriver hddx(ESC_PWM_PIN_OUT, ESC_DIR_PIN_OUT, 1000, 2000, &Serial);
 HddDriver hddy(ESC2_PWM_PIN_OUT, ESC2_DIR_PIN_OUT, 1000, 2000, &Serial);
 
-float cmdVoltageMx = HDD_ZERO_SPEED;
+float cmdVoltageMx = MIN_VOLTAGE;
 float cmdTorqueMx = 0;
-float cmdSpeedMx = 0;
+float cmdSpeedMx = HDD_ZERO_SPEED;
 
-float cmdVoltageMy = HDD_ZERO_SPEED;
+float cmdVoltageMy = MIN_VOLTAGE;
 float cmdTorqueMy = 0;
-float cmdSpeedMy = 0;
+float cmdSpeedMy = HDD_ZERO_SPEED;
 
 #define TORQUE_MODE 0
 #define SPEED_MODE 1
+#define OPENLOOP_MODE 0
+#define CLOSELOOP_MODE 1
 
-uint8_t mode = 0;
-uint8_t controlMode = 0;
+uint8_t operationMode = OPENLOOP_MODE;
+uint8_t controlMode = TORQUE_MODE;
 
 // ================================================================
 // ===               Sensor PARAMS                              ===
@@ -483,7 +486,12 @@ void loop() {
     //Speed Calculation
     update_speed();
     filtered_speed = lowpassFilter.input(speed_rpm);
-    filtered_speed_calib = filtered_speed*0.68+870;             //[RPM]
+    if (filtered_speed>5500)
+        filtered_speed_calib = filtered_speed*0.68+870;             //[RPM]
+    else if (filtered_speed<80)
+        filtered_speed_calib = 0;                                   //[RPM]
+    else
+        filtered_speed_calib = filtered_speed;                      //[RPM]
 
     //Speed Controller Calculation
     speedInputMx = filtered_speed_calib;
@@ -510,17 +518,17 @@ void loop() {
     currentControllerMx.Compute();      //This update the controlVoltageMx variable
 
     //Set Motor Voltage Based on Operation Mode
-    if (mode == 0)      //Open Loop
+    if (operationMode == OPENLOOP_MODE)      //Open Loop
     {
         hddx.rotate(cmdVoltageMx);
         hddy.rotate(cmdVoltageMy);
     }
-    else if (mode == 1) //Close Loop
+    else if (operationMode == CLOSELOOP_MODE) //Close Loop
     {
         hddx.rotate(controlVoltageMx);
         hddy.rotate(cmdVoltageMy);
     }
-    send_data(1, ypr[0]*180/M_PI, ypr[1]*180/M_PI, filtered_current, filtered_speed_calib);
+    send_data(1, ypr[0]*180/M_PI, ypr[1]*180/M_PI, filtered_current, filtered_speed);
 }
 
 //---------------Comunication Methos-------------------------------------------------------------
@@ -719,26 +727,26 @@ void readCommands()
     }*/
     else if (command[0]==SET_MODE)
     {
-      mode = command[1];
+      operationMode = command[1];
     }
     else if (command[0]==STOP)
     {
-      mode = 0;
-      cmdVoltageMx = HDD_ZERO_SPEED;
-      cmdVoltageMy = HDD_ZERO_SPEED;
+      operationMode = OPENLOOP_MODE;
+      cmdVoltageMx = MIN_VOLTAGE;
+      cmdVoltageMy = MIN_VOLTAGE;
       hddx.idle();
       hddy.idle();
     }
     else if (command[0]==STOP_X)
     {
-      mode = 0;
-      cmdVoltageMx = HDD_ZERO_SPEED;
+      operationMode = OPENLOOP_MODE;
+      cmdVoltageMx = MIN_VOLTAGE;
       hddx.idle();
     }
     else if (command[0]==STOP_Y)
     {
-      mode = 0;
-      cmdVoltageMy = HDD_ZERO_SPEED;
+      operationMode = OPENLOOP_MODE;
+      cmdVoltageMy = MIN_VOLTAGE;
       hddy.idle();
     }
     /*else if (command[0]==PRINT_SPEED)
@@ -747,7 +755,7 @@ void readCommands()
     }*/
     else if (command[0] == AUTOMATIC_MODE)
     {
-      mode = 1;
+      operationMode = CLOSELOOP_MODE;
     }
     /*else if (command[0] == USE_CURRENT_SETPOINT)
     {
