@@ -35,7 +35,7 @@ class BTRosInterface:
 
     def initialize(self):
         # Get params and allocate msgs
-        self.state_update_rate = rospy.get_param('/rate', 1000)
+        self.state_update_rate = rospy.get_param('/rate', 5000)
         #Buetooth
         self.bt_receiver.initialize()
 
