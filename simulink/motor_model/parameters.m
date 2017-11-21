@@ -1,17 +1,38 @@
 %% Parametros Motor
-% Eletricos
-R = 4*2;			%[Ohm]
-L = (5e-3)*2;		%[H]
-% Mecanicos
-KM = 5.54;			%[Nm/A]
-mr = 25e-3;			%[Kg]
-rr = 1.25e-2;		%[m]
-Ir = 0.5*mr*rr^2;	%[Kgm^2]
-B = 0.0022;			%[Nm/rads^-1]
-Kv = 0.003;			%[V/rads^-1]
+
+% Parametros Rotor
+mr = 27e-3;										%[Kg]
+
+Vr1 = (0.8e-2)*pi*(0.25e-2)^2;					%[m^3]
+Vr2 = (0.4e-2)*pi*((0.7e-2)^2-(0.25e-2)^2);		%[m^3]
+Vr3 = (0.7e-2)*pi*((1.65e-2)^2-(1.4e-2)^2);		%[m^3]
+Vr4 = (1.05e-2)*pi*(1.25e-2)^2;					%[m^3]
+Vr = Vr1+Vr2+Vr3+Vr4;
+
+ro_r = mr/Vr;
+
+Ir1 = 0.5*(ro_r*Vr1)*(0.25e-2)^2;
+Ir2 = 0.5*(ro_r*Vr2)*((0.7e-2)^2+(0.25e-2)^2);
+Ir3 = 0.5*(ro_r*Vr3)*((1.65e-2)^2+(1.4e-2)^2);
+Ir4 = 0.5*(ro_r*Vr4)*(1.25e-2)^2;
+Irt = Ir1+Ir2+Ir3+Ir4
+
 %% Parametros Disco
-Iw = 2.7744e-5;		%[Kgm^2]
-I = Ir+Iw			%[Kgm^2]
+m_disc = 23e-3;
+rext = 9.5e-2;									%[m]
+rint = 2.5e-2;									%[m]
+Iw = 0.5*m_disc*(rext^2+rint^2)					%[Kgm^2]
+
+I = Irt+Iw										%[Kgm^2]
+
+% Eletricos
+R = 4*2;										%[Ohm]
+L = (5e-3)*2;									%[H]
+
+% Modelo
+KM = 5.54;										%[Nm/A]
+B = 0.0022;										%[Nm/rads^-1]
+Kv = 0.003;										%[V/rads^-1]
 
 % Factores de conversion
 rad2rpm = 60/(2*pi);

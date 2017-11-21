@@ -67,7 +67,7 @@ a1 = [1 -3.973730046565231 5.921534645073681 -3.921876509896709 0.97407192146939
 	% speed_filt = filtroPasaBajos(var4, 100, [0.1], [0.5]);
 	% yaw_filt = filter(b1,a1,var1);
 	% speed_ref = filter(b1,a1,var2);
-	% yaw_ref = filter(b1,a1,var3);
+	% current = filter(b1,a1,var3);
 	% wheel_speed_filt = filter(b1,a1,var4);
 
 	f = 5000/11;
@@ -76,7 +76,7 @@ a1 = [1 -3.973730046565231 5.921534645073681 -3.921876509896709 0.97407192146939
 
 	yaw_filt = var1;
 	speed_ref = var2;
-	yaw_ref = var3;
+	current = var3;
 	wheel_speed_filt = var4;
 
 	subplot(2,2,1);
@@ -101,7 +101,7 @@ a1 = [1 -3.973730046565231 5.921534645073681 -3.921876509896709 0.97407192146939
 
 	subplot(2,2,3)
 	% plot(fig1, var2, 'r')
-	plot(ax3, time, yaw_ref, 'g')
+	plot(ax3, time, current, 'g')
 	title('Corriente', 'fontsize', 10)
 	xlabel(ax3, 'Tiempo [s]', 'fontsize', 10); ylabel('Corriente [A]', 'fontsize', 10);
 	grid on
@@ -118,6 +118,8 @@ a1 = [1 -3.973730046565231 5.921534645073681 -3.921876509896709 0.97407192146939
 	% ylim([min_var4-10 max_var4+10])
 	ylim([0 15000])
 	% xlim([sz-window_sz sz+window_sz])
+	im = current;
+	w_w = wheel_speed_filt;
 
 	% pause(1)
 % end
