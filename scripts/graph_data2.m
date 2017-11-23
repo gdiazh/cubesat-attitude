@@ -72,16 +72,16 @@ a1 = [1 -3.973730046565231 5.921534645073681 -3.921876509896709 0.97407192146939
 
 	f = 5000/11;
 	dt = 1/f;
-	time = 0:dt:(length(var4)-1)*dt;
+	time_data = 0:dt:(length(var4)-1)*dt;
 
 	yaw_filt = var1;
 	speed_ref = var2;
-	current = var3;
+	current = var3-0.1;
 	wheel_speed_filt = var4;
 
 	subplot(2,2,1);
 	% plot(fig1, var1, 'b')
-	plot(ax1, time, yaw_filt, 'b')
+	plot(ax1, time_data, yaw_filt, 'b')
 	title('Angulo Yaw', 'fontsize', 10)
 	xlabel(ax1, 'Tiempo [s]', 'fontsize', 10); ylabel('Yaw [DEG]', 'fontsize', 10);
 	grid on
@@ -91,7 +91,7 @@ a1 = [1 -3.973730046565231 5.921534645073681 -3.921876509896709 0.97407192146939
 	% hold on
 	subplot(2,2,2)
 	% plot(fig1, var2, 'r')
-	plot(ax2, time, speed_ref, 'r')
+	plot(ax2, time_data, speed_ref, 'r')
 	title('Angulo Pitch', 'fontsize', 10)
 	xlabel(ax2, 'Tiempo [s]', 'fontsize', 10); ylabel('Pitch [DEG]', 'fontsize', 10);
 	grid on
@@ -101,7 +101,7 @@ a1 = [1 -3.973730046565231 5.921534645073681 -3.921876509896709 0.97407192146939
 
 	subplot(2,2,3)
 	% plot(fig1, var2, 'r')
-	plot(ax3, time, current, 'g')
+	plot(ax3, time_data, current, 'g')
 	title('Corriente', 'fontsize', 10)
 	xlabel(ax3, 'Tiempo [s]', 'fontsize', 10); ylabel('Corriente [A]', 'fontsize', 10);
 	grid on
@@ -111,15 +111,15 @@ a1 = [1 -3.973730046565231 5.921534645073681 -3.921876509896709 0.97407192146939
 
 	subplot(2,2,4)
 	% plot(fig1, var2, 'r')
-	plot(ax4, time, wheel_speed_filt, 'k')
+	plot(ax4, time_data, wheel_speed_filt, 'k')
 	title('Velocidad Rueda Filtrada', 'fontsize', 10)
 	xlabel(ax4, 'Tiempo [s]', 'fontsize', 10); ylabel('Velocidad Rueda [RPM-NC]', 'fontsize', 10);
 	grid on
 	% ylim([min_var4-10 max_var4+10])
 	ylim([0 15000])
 	% xlim([sz-window_sz sz+window_sz])
-	im = current;
-	w_w = wheel_speed_filt;
+	im_data = current;
+	w_w_data = wheel_speed_filt;
 
 	% pause(1)
 % end

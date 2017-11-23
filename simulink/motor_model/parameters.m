@@ -26,13 +26,15 @@ Iw = 0.5*m_disc*(rext^2+rint^2)					%[Kgm^2]
 I = Irt+Iw										%[Kgm^2]
 
 % Eletricos
-R = 4*2;										%[Ohm]
-L = (5e-3)*2;									%[H]
+Rfn = 1.9;										%[Ohm]
+Rff = 4.1;										%[Ohm]
+R = 2*Rfn;										%[Ohm]
+L = (5e-4)*2;									%[H]
 
 % Modelo
-KM = 5.54;										%[Nm/A]
-B = 0.0022;										%[Nm/rads^-1]
-Kv = 0.003;										%[V/rads^-1]
+KM = 0.09;									%[Nm/A]
+B = 2.8645e-05;									%[Nm/rads^-1]
+Kv = 0.012;										%[V/rads^-1]
 
 % Factores de conversion
 rad2rpm = 60/(2*pi);

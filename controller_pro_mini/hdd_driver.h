@@ -14,7 +14,7 @@
 #define JUMPING_DELAY 4000
 
 // Motor parameters
-#define Km 0.0251
+#define Km 0.0986
 #define K_ESC 100
 #define MAX_TORQUE 700
 
