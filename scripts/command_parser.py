@@ -20,6 +20,12 @@ AUTOMATIC_MODE = 11
 STOP_X = 12
 STOP_Y = 13
 STOP_Z = 14
+SET_CONTROL_MODE = 15
+CHANGE_CURRENT_GAINS = 16
+CHANGE_SPEED_GAINS = 17
+
+TORQUE_MODE = 0
+SPEED_MODE = 1
 
 HDD_ZERO_SPEED = 1000
 MIN_VOLTAGE = 0
@@ -28,12 +34,19 @@ class CommandParser:
     def __init__(self):
         self.command = "default"
 
-    def parse_command(self, command, args):
+    def parse_command(self, command, args, iGains, wGains):
         mode = args[0]
-        attitude = args[1]
-        speed =args[2]
-        torque =args[3]
-        voltage =args[4]
+        control_mode = args[1]
+        attitude = args[2]
+        speed =args[3]
+        torque =args[4]
+        voltage =args[5]
+        kp_ix = iGains[0]
+        ki_ix = iGains[1]
+        kd_ix = iGains[2]
+        kp_wx = wGains[0]
+        ki_wx = wGains[1]
+        kd_wx = wGains[2]
         if (command == "set-voltage"):
             self.command_code = [SET_VOLTAGE, voltage[0], voltage[1], voltage[2]]
         elif (command == "set-torque"):
@@ -44,6 +57,14 @@ class CommandParser:
             self.command_code = [KEEP_ATTITUDE, attitude[0], attitude[1], attitude[2]]
         elif (command == "set-mode"):
             self.command_code = [SET_MODE, mode, 0, 0]
+        elif (command == "set-speed-control"):
+            self.command_code = [SET_CONTROL_MODE, SPEED_MODE, 0, 0]
+        elif (command == "set-torque-control"):
+            self.command_code = [SET_CONTROL_MODE, TORQUE_MODE, 0, 0]
+        elif (command == "torque-gain"):
+            self.command_code = [CHANGE_CURRENT_GAINS, kp_ix, ki_ix, kd_ix]
+        elif (command == "speed-gain"):
+            self.command_code = [CHANGE_SPEED_GAINS, kp_wx, ki_wx, kd_wx]
         elif (command == "stop"):
             self.command_code = [STOP, MIN_VOLTAGE, MIN_VOLTAGE, MIN_VOLTAGE]
         elif (command == "use-current-setpoint"):

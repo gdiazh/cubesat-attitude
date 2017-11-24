@@ -28,10 +28,13 @@ class BTRosInterface:
         self.file_manager = fileManager(test_name, debug = True)
         self.command_parser = CommandParser()
         self.mode = "manual"
+        self.control_mode = "torque"
         self.attitude = [0,0,0]                                         #[ypr]  [DEG]
         self.speed = [HDD_ZERO_SPEED,HDD_ZERO_SPEED,HDD_ZERO_SPEED]     #[xyz]  [RPM]
         self.torque = [0,0,0]                                           #[xyz]  [Nm]
         self.voltage = [0,0,0]                                          #[xyz]  [V]
+        self.iGains = [5, 10, 0]										#[PID]
+        self.wGains = [15, 25, 0]										#[PID]
 
     def initialize(self):
         # Get params and allocate msgs
@@ -46,6 +49,7 @@ class BTRosInterface:
         #subscribers
         self.command_sub = rospy.Subscriber('/controller_command', String, self.process_command)
         self.mode_sub = rospy.Subscriber('/mode', String, self.set_mode)
+        self.control_mode_sub = rospy.Subscriber('/control_mode', String, self.set_control_mode)
         
         self.attitude_sub = rospy.Subscriber('/attitude', Float32MultiArray, self.set_attitude)
         
@@ -60,6 +64,9 @@ class BTRosInterface:
         self.voltageX_sub = rospy.Subscriber('/voltage_x', Float32, self.set_voltage_x)
         self.voltageY_sub = rospy.Subscriber('/voltage_y', Float32, self.set_voltage_y)
         self.voltageZ_sub = rospy.Subscriber('/voltage_z', Float32, self.set_voltage_z)
+
+        self.iGains_sub = rospy.Subscriber('/iGains', Float32MultiArray, self.set_iGains)
+        self.wGains_sub = rospy.Subscriber('/wGains', Float32MultiArray, self.set_wGains)
 
         #publishers
         self.data1_pub = rospy.Publisher('/current_input', Float32, queue_size=70)
@@ -77,36 +84,43 @@ class BTRosInterface:
         self.running = False
         
         self.command_sub.unregister()
-        self.mode_sub
+        self.mode_sub.unregister()
+        self.control_mode_sub.unregister()
         
-        self.attitude_sub
+        self.attitude_sub.unregister()
 
         self.speedX_sub.unregister()
         self.speedY_sub.unregister()
         self.speedZ_sub.unregister()
 
-        self.torqueX_sub
-        self.torqueY_sub
-        self.torqueZ_sub
+        self.torqueX_sub.unregister()
+        self.torqueY_sub.unregister()
+        self.torqueZ_sub.unregister()
 
-        self.voltageX_sub
-        self.voltageY_sub
-        self.voltageZ_sub
+        self.voltageX_sub.unregister()
+        self.voltageY_sub.unregister()
+        self.voltageZ_sub.unregister()
+
+        self.iGains_sub.unregister()
+        self.wGains_sub.unregister()
 
         self.data1_pub.unregister()
         self.data2_pub.unregister()
         self.data3_pub.unregister()
         self.data4_pub.unregister()
 
-        self.cmd_speedX_pub
-        self.cmd_torqueX_pub
-        self.cmd_voltageX_pub
+        self.cmd_speedX_pub.unregister()
+        self.cmd_torqueX_pub.unregister()
+        self.cmd_voltageX_pub.unregister()
 
         self.bt_receiver.stop()
         self.file_manager.stop()
 
     def set_mode(self, msg):
         self.mode = msg.data
+
+    def set_control_mode(self, msg):
+        self.control_mode = msg.data
 
     def set_attitude(self, msg):
         self.attitude = msg.data
@@ -138,14 +152,20 @@ class BTRosInterface:
     def set_voltage_z(self, msg):
         self.voltage[2] = msg.data
 
+    def set_iGains(self, msg):
+        self.iGains = msg.data
+
+    def set_wGains(self, msg):
+        self.wGains = msg.data
+
     def process_command(self, msg):
         print "msg to send:"+msg.data
         if (msg.data == "end") :
             self.running = False
             return
         else:
-            args = [self.mode, self.attitude, self.speed, self.torque, self.voltage]
-            command_code = self.command_parser.parse_command(msg.data, args)
+            args = [self.mode, self.control_mode, self.attitude, self.speed, self.torque, self.voltage]
+            command_code = self.command_parser.parse_command(msg.data, args, self.iGains, self.wGains)
             if (command_code!=[-1,-1,-1,-1]):
                 frame = self.file_manager.encode(command_code)
                 self.bt_receiver.write(frame)

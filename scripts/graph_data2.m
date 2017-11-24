@@ -86,7 +86,7 @@ a1 = [1 -3.973730046565231 5.921534645073681 -3.921876509896709 0.97407192146939
 	xlabel(ax1, 'Tiempo [s]', 'fontsize', 10); ylabel('Yaw [DEG]', 'fontsize', 10);
 	grid on
 	% ylim([min_var1-10 max_var1+10])
-	ylim([-190 190])
+	ylim([0 3])
 	% xlim([sz-window_sz sz+window_sz])
 	% hold on
 	subplot(2,2,2)
@@ -96,7 +96,7 @@ a1 = [1 -3.973730046565231 5.921534645073681 -3.921876509896709 0.97407192146939
 	xlabel(ax2, 'Tiempo [s]', 'fontsize', 10); ylabel('Pitch [DEG]', 'fontsize', 10);
 	grid on
 	% ylim([min_var2-10 max_var2+10])
-	ylim([-190 190])
+	ylim([0 3])
 	% xlim([sz-window_sz sz+window_sz])
 
 	subplot(2,2,3)
@@ -106,7 +106,7 @@ a1 = [1 -3.973730046565231 5.921534645073681 -3.921876509896709 0.97407192146939
 	xlabel(ax3, 'Tiempo [s]', 'fontsize', 10); ylabel('Corriente [A]', 'fontsize', 10);
 	grid on
 	% ylim([min_var3-10 max_var3+10])
-	ylim([0 1])
+	ylim([0 6])
 	% xlim([sz-window_sz sz+window_sz])
 
 	subplot(2,2,4)

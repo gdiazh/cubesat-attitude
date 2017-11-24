@@ -168,6 +168,9 @@ void dmpDataReady() {
 #define STOP_X 12
 #define STOP_Y 13
 #define STOP_Z 14
+#define SET_CONTROL_MODE 15
+#define CHANGE_CURRENT_GAINS 16
+#define  CHANGE_SPEED_GAINS 17
 
 // ================================================================
 // ===               Actuators params                           ===
@@ -226,7 +229,7 @@ float filtered_speed_calib = 0.0;
 // ===       PID Speed Controller PARAMS                        ===
 // ================================================================
 double speedSetpointMx, speedInputMx, controlTorqueMx;
-double Kp_wx=5, Ki_wx=1, Kd_wx=1;
+double Kp_wx=15, Ki_wx=25, Kd_wx=0;
 PID speedControllerMx(&speedInputMx, &controlTorqueMx, &speedSetpointMx, Kp_wx, Ki_wx, Kd_wx, DIRECT);
 
 // ================================================================
@@ -319,13 +322,13 @@ void setup() {
     // Speed Controller Initialization
     speedInputMx = 0;
     speedSetpointMx = 0.0;                      //[RPM]
-    speedControllerMx.SetOutputLimits(-10, 10); //[Nm]
+    speedControllerMx.SetOutputLimits(0, 2.5);   //[Nm]
     speedControllerMx.SetMode(AUTOMATIC);
 
     // Current Controller Initialization
     currentInputMx = 0;
     currentSetpointMx = 0.0;                        //[A]
-    currentControllerMx.SetOutputLimits(-5, 5); //[V]
+    currentControllerMx.SetOutputLimits(0, 5); //[V]
     currentControllerMx.SetMode(AUTOMATIC);
 
     //Hall Encoder pins
@@ -500,11 +503,11 @@ void loop() {
     //Update Reference for Current Controller
     if (controlMode == SPEED_MODE)
     {
-        currentSetpointMx = controlTorqueMx/Km;
+        currentSetpointMx = controlTorqueMx;//   /KM
     }
     else if (controlMode == TORQUE_MODE)
     {
-        currentSetpointMx = cmdTorqueMx;
+        currentSetpointMx = cmdTorqueMx;//      /KM
     }
 
     //Current Calculation
@@ -728,6 +731,24 @@ void readCommands()
     else if (command[0]==SET_MODE)
     {
       operationMode = command[1];
+    }
+    else if (command[0]==SET_CONTROL_MODE)
+    {
+      controlMode = command[1];
+    }
+    else if (command[0]==CHANGE_CURRENT_GAINS)
+    {
+      Kp_imx = command[1];
+      Ki_imx = command[2];
+      Kd_imx = command[3];
+      currentControllerMx.SetTunings(Kp_imx, Ki_imx, Kd_imx);
+    }
+    else if (command[0]==CHANGE_SPEED_GAINS)
+    {
+      Kp_wx = command[1];
+      Ki_wx = command[2];
+      Kd_wx = command[3];
+      speedControllerMx.SetTunings(Kp_wx, Ki_wx, Kd_wx);
     }
     else if (command[0]==STOP)
     {
