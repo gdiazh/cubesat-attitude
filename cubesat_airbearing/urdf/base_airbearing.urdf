@@ -1,0 +1,43 @@
+<robot
+  name="base_airbearing">
+  <link
+    name="base_airbearing">
+    <inertial>
+      <origin
+        xyz="7.9644E-18 -0.013243 4.97353097183487E-19"
+        rpy="0 0 0" />
+      <mass
+        value="0.20052" />
+      <inertia
+        ixx="0.000136365631888585"
+        ixy="-4.12637760552995E-21"
+        ixz="8.45379239206024E-22"
+        iyy="0.000247483006850548"
+        iyz="-8.45615527685662E-21"
+        izz="0.000136365631888585" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="1.5707963267949 0 0" />
+      <geometry>
+        <mesh
+          filename="package://cubesat_airbearing/meshes/base_airbearing.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="1.5707963267949 0 0" />
+      <geometry>
+        <mesh
+          filename="package://cubesat_airbearing/meshes/base_airbearing.STL" />
+      </geometry>
+    </collision>
+  </link>
+</robot>

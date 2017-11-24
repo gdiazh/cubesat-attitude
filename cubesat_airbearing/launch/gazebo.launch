@@ -1,0 +1,34 @@
+<launch>
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+     <arg name="paused" value="true"/>
+  </include>
+  <node
+    name="tf_base_link"
+    pkg="tf"
+    type="static_transform_publisher"
+    args="0 0 0 0 0 0 ball_link base_link 40" />
+  <node
+    name="tf_footprint_base"
+    pkg="tf"
+    type="static_transform_publisher"
+    args="0 0 0 0 0 0 base_link base_footprint 40" />
+  <node
+    name="spawn_cubesat"
+    pkg="gazebo_ros"
+    type="spawn_model"
+    args="-file $(find cubesat_airbearing)/urdf/cubesat_airbearing.urdf -urdf -model cubesat_airbearing 
+    -x 0 -y 0 -z 0.022"
+    output="screen" />
+  <node
+    name="spawn_airbearing"
+    pkg="gazebo_ros"
+    type="spawn_model"
+    args="-file $(find cubesat_airbearing)/urdf/base_airbearing.urdf -urdf -model base_airbearing 
+    -R -1.5707 -P 0 -Y 0"
+    output="screen" />
+  <node
+    name="fake_joint_calibration"
+    pkg="rostopic"
+    type="rostopic"
+    args="pub /calibrated std_msgs/Bool true" />
+</launch>
