@@ -62,9 +62,9 @@ class BTRosInterface:
         self.voltageZ_sub = rospy.Subscriber('/voltage_z', Float32, self.set_voltage_z)
 
         #publishers
-        self.data1_pub = rospy.Publisher('/yaw', Float32, queue_size=70)
-        self.data2_pub = rospy.Publisher('/pitch', Float32, queue_size=70)
-        self.data3_pub = rospy.Publisher('/current', Float32, queue_size=70)
+        self.data1_pub = rospy.Publisher('/current_input', Float32, queue_size=70)
+        self.data2_pub = rospy.Publisher('/current_output', Float32, queue_size=70)
+        self.data3_pub = rospy.Publisher('/control_voltage', Float32, queue_size=70)
         self.data4_pub = rospy.Publisher('/filtered_wheel_speed', Float32, queue_size=70)
 
         self.cmd_speedX_pub = rospy.Publisher('/cmd_speedX', Float32, queue_size=70)

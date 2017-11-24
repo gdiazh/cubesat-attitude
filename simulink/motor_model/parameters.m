@@ -32,7 +32,7 @@ R = 2*Rfn;										%[Ohm]
 L = (5e-4)*2;									%[H]
 
 % Modelo
-KM = 0.09;									%[Nm/A]
+KM = 0.075;										%[Nm/A]
 B = 2.8645e-05;									%[Nm/rads^-1]
 Kv = 0.012;										%[V/rads^-1]
 

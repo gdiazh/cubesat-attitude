@@ -233,7 +233,7 @@ PID speedControllerMx(&speedInputMx, &controlTorqueMx, &speedSetpointMx, Kp_wx, 
 // ===       PID Current Controller PARAMS, Motor x             ===
 // ================================================================
 double currentSetpointMx, currentInputMx, controlVoltageMx;
-double Kp_imx=10, Ki_imx=1, Kd_imx=1;
+double Kp_imx=3.961, Ki_imx=10, Kd_imx=0;
 PID currentControllerMx(&currentInputMx, &controlVoltageMx, &currentSetpointMx, Kp_imx, Ki_imx, Kd_imx, DIRECT);
 
 // ================================================================
@@ -504,14 +504,14 @@ void loop() {
     }
     else if (controlMode == TORQUE_MODE)
     {
-        currentSetpointMx = cmdTorqueMx/Km;
+        currentSetpointMx = cmdTorqueMx;
     }
 
     //Current Calculation
     float current_raw = analogRead(CURRENT_SENSOR);
     if (current_raw>=511) current = (current_raw-511)*0.06;
     else current = 0;
-    filtered_current = currentlowpassFilter.input(current);     //[A]
+    filtered_current = currentlowpassFilter.input(current)-0.14;     //[A]
 
     //Current Controller Calculation
     currentInputMx = filtered_current;
@@ -528,7 +528,7 @@ void loop() {
         hddx.rotate(controlVoltageMx);
         hddy.rotate(cmdVoltageMy);
     }
-    send_data(1, ypr[0]*180/M_PI, ypr[1]*180/M_PI, filtered_current, filtered_speed);
+    send_data(1, currentSetpointMx, currentInputMx, controlVoltageMx, filtered_speed_calib);
 }
 
 //---------------Comunication Methos-------------------------------------------------------------
