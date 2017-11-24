@@ -1,0 +1,347 @@
+<robot
+  name="cubesat_airbearing">
+  <link
+    name="ball_link">
+    <inertial>
+      <origin
+        xyz="-5.2042E-18 0 0.028231"
+        rpy="0 0 0" />
+      <mass
+        value="0.17121" />
+      <inertia
+        ixx="0.00013588"
+        ixy="-4.4887E-20"
+        ixz="2.1502E-20"
+        iyy="0.00013588"
+        iyz="1.7661E-20"
+        izz="0.00021627" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://cubesat_airbearing/meshes/ball_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.79216 0.81961 0.93333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://cubesat_airbearing/meshes/ball_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="cubesat_link">
+    <inertial>
+      <origin
+        xyz="-0.0032259 0.0028706 0.05018"
+        rpy="0 0 0" />
+      <mass
+        value="0.31003" />
+      <inertia
+        ixx="0.0005972"
+        ixy="-2.84E-06"
+        ixz="1.2296E-06"
+        iyy="0.00061903"
+        iyz="-1.3168E-05"
+        izz="0.00054629" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://cubesat_airbearing/meshes/cubesat_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.89804 0.91765 0.92941 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://cubesat_airbearing/meshes/cubesat_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="cubesat_joint"
+    type="fixed">
+    <origin
+      xyz="0 0 0.05"
+      rpy="0 0 -1.837E-16" />
+    <parent
+      link="ball_link" />
+    <child
+      link="cubesat_link" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+  <link
+    name="x_wheel_link">
+    <inertial>
+      <origin
+        xyz="2.1684E-19 0 0.00075"
+        rpy="0 0 0" />
+      <mass
+        value="0.020913" />
+      <inertia
+        ixx="1.0298E-05"
+        ixy="2.9646E-21"
+        ixz="8.2298E-24"
+        iyy="1.0298E-05"
+        iyz="-4.0619E-24"
+        izz="2.0587E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://cubesat_airbearing/meshes/x_wheel_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.89804 0.91765 0.92941 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://cubesat_airbearing/meshes/x_wheel_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="x_wheel_joint"
+    type="continuous">
+    <origin
+      xyz="0 0.044112 0.05"
+      rpy="1.5708 -1.0096 3.1416" />
+    <parent
+      link="cubesat_link" />
+    <child
+      link="x_wheel_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      effort="0.5"
+      velocity="1200" />
+  </joint>
+  <link
+    name="y_wheel_link">
+    <inertial>
+      <origin
+        xyz="2.6021E-18 2.7756E-17 0.00075"
+        rpy="0 0 0" />
+      <mass
+        value="0.020913" />
+      <inertia
+        ixx="1.0298E-05"
+        ixy="-1.3235E-22"
+        ixz="-1.4697E-23"
+        iyy="1.0298E-05"
+        iyz="-6.1395E-25"
+        izz="2.0587E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://cubesat_airbearing/meshes/y_wheel_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.89804 0.91765 0.92941 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://cubesat_airbearing/meshes/y_wheel_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="y_wheel_joint"
+    type="continuous">
+    <origin
+      xyz="-0.044112 0 0.05"
+      rpy="1.5708 1.5356 -1.5708" />
+    <parent
+      link="cubesat_link" />
+    <child
+      link="y_wheel_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      effort="0.5"
+      velocity="1200" />
+  </joint>
+  <link
+    name="z_wheel_link">
+    <inertial>
+      <origin
+        xyz="0 -1.3878E-17 -0.00075"
+        rpy="0 0 0" />
+      <mass
+        value="0.020913" />
+      <inertia
+        ixx="1.0298E-05"
+        ixy="4.2352E-22"
+        ixz="8.2746E-24"
+        iyy="1.0298E-05"
+        iyz="1.2707E-23"
+        izz="2.0587E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://cubesat_airbearing/meshes/z_wheel_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.89804 0.91765 0.92941 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://cubesat_airbearing/meshes/z_wheel_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="z_wheel_joint"
+    type="continuous">
+    <origin
+      xyz="0 -0.0010003 0.097612"
+      rpy="-9.0695E-09 1.7536E-08 2.6643" />
+    <parent
+      link="cubesat_link" />
+    <child
+      link="z_wheel_link" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      effort="0.5"
+      velocity="1200" />
+  </joint>
+  <!-- SDF properties -->
+  <!-- Colors -->
+  <gazebo reference="ball_link">
+    <material>Gazebo/DarkGray</material>
+  </gazebo>
+  <gazebo reference="x_wheel_link">
+    <material>Gazebo/BlackTransparent</material>
+  </gazebo>
+  <gazebo reference="y_wheel_link">
+    <material>Gazebo/BlackTransparent</material>
+  </gazebo>
+  <gazebo reference="z_wheel_link">
+    <material>Gazebo/BlackTransparent</material>
+  </gazebo>
+  <!-- Dynamics -->
+  <gazebo reference="x_wheel_joint">
+    <provideFeedback>true</provideFeedback>
+  </gazebo>
+  <gazebo reference="y_wheel_joint">
+    <provideFeedback>true</provideFeedback>
+  </gazebo>
+  <gazebo reference="z_wheel_joint">
+    <provideFeedback>true</provideFeedback>
+  </gazebo>
+  <!-- Sensors -->
+  <gazebo reference="ball_link">
+    <gravity>true</gravity>
+    <sensor name="imu_sensor" type="imu">
+      <always_on>true</always_on>
+      <update_rate>100</update_rate>
+      <visualize>true</visualize>
+      <topic>__default_topic__</topic>
+      <plugin name="imu_plugin" filename="libgazebo_ros_imu_sensor.so">
+        <robotNamespace>/cubesat</robotNamespace>
+        <topicName>imu_data</topicName>
+        <bodyName>ball_link</bodyName>
+        <updateRateHZ>10.0</updateRateHZ>
+        <gaussianNoise>0.0</gaussianNoise>
+        <xyzOffset>0 0 0</xyzOffset>
+        <rpyOffset>0 0 0</rpyOffset>
+        <frameName>ball_link</frameName>
+      </plugin>
+      <pose>0 0 0 0 0 0</pose>
+    </sensor>
+  </gazebo>
+  <!-- Control -->
+  <gazebo>
+  <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+    <robotNamespace>/cubesat</robotNamespace>
+  </plugin>
+</gazebo>
+<transmission name="tran1">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="x_wheel_joint">
+    <hardwareInterface>EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor1">
+    <hardwareInterface>EffortJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran2">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="y_wheel_joint">
+    <hardwareInterface>EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor2">
+    <hardwareInterface>EffortJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="tran3">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="z_wheel_joint">
+    <hardwareInterface>EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="motor3">
+    <hardwareInterface>EffortJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+</robot>
