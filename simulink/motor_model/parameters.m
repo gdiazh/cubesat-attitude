@@ -33,7 +33,7 @@ L = (5e-4)*2;									%[H]
 
 % Modelo
 KM = 0.0065;									%[Nm/A]
-B = 0.21e-05;								%[Nm/rads^-1]
+B = 0.21e-05;									%[Nm/rads^-1]
 Kv = KM;										%[V/rads^-1]
 
 % Factores de conversion

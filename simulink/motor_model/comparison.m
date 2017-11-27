@@ -24,7 +24,7 @@ sim('motor_model');
 %Calculate error in steady state
 
 t_steady_sim = 70;
-t_steady_data = 30;
+t_steady_data = 20;
 n_sim = int32(t_steady_sim/(time_sim(1001)-time_sim(1000)));
 n_data = int32(t_steady_data/(time_data(1001)-time_data(1000)));
 
@@ -51,9 +51,10 @@ grid on
 hold on
 set(gca,'fontsize',14)
 title('Corriente Motor', 'fontsize', 14)
-xlabel(ax1, 'Tiempo [s]', 'fontsize', 14); ylabel('Corriente Motor [A]', 'fontsize', 14);
+xlabel(ax1, 'Tiempo [s]', 'fontsize', 14); ylabel('Corriente [A]', 'fontsize', 14);
 legend('Datos','Modelo')
-
+str1 = strcat('Error E.E. = ', num2str(im_error_p, '%2.2f'), '%');
+annotation('textbox',[.2 .5 .3 .3],'String',str1,'FitBoxToText','on');
 
 ax2 = subplot(1,2,2);
 plot(ax2, time_data, w_w_data, 'b')
@@ -63,6 +64,8 @@ hold on
 plot(ax2, time_data(n_data), w_w_data(n_data), 'ko')
 hold on
 plot(ax2, time_sim(n_sim), w_w_sim(n_sim), 'ko')
-title('pwm(voltage)', 'fontsize', 14)
-xlabel(ax2, 'Tiempo [s]', 'fontsize', 14); ylabel('Velocidad Motor [RPM]', 'fontsize', 14);
+title('Velocidad Motor', 'fontsize', 14)
+xlabel(ax2, 'Tiempo [s]', 'fontsize', 14); ylabel('Velocidad [RPM]', 'fontsize', 14);
 legend('Datos','Modelo')
+str2 = strcat('Error E.E. = ', num2str(w_w_error_p, '%2.2f'), '%');
+annotation('textbox',[.75 .5 .3 .3], 'String',str2,'FitBoxToText','on');
