@@ -221,7 +221,7 @@ unsigned long time_ref = 0;
 volatile uint8_t steps = 0;
 float speed_rpm = 0.0;
 float filtered_speed = 0.0;
-float speedFilterFrecuency = 1; //[Hz]
+float speedFilterFrecuency = 0.7; //[Hz]
 FilterOnePole lowpassFilter(LOWPASS, speedFilterFrecuency);
 float filtered_speed_calib = 0.0;
 
@@ -229,7 +229,7 @@ float filtered_speed_calib = 0.0;
 // ===       PID Speed Controller PARAMS                        ===
 // ================================================================
 double speedSetpointMx, speedInputMx, controlTorqueMx;
-double Kp_wx=15, Ki_wx=25, Kd_wx=0;
+double Kp_wx=0.001, Ki_wx=0.00, Kd_wx=0.00;
 PID speedControllerMx(&speedInputMx, &controlTorqueMx, &speedSetpointMx, Kp_wx, Ki_wx, Kd_wx, DIRECT);
 
 // ================================================================
@@ -251,7 +251,7 @@ uint8_t data_id = 0;
 #define CURRENT_SENSOR A2
 float current = 0;
 float filtered_current = 0.0;
-float currentFilterFrecuency = 1; //[Hz]
+float currentFilterFrecuency = 0.5; //[Hz]
 FilterOnePole currentlowpassFilter(LOWPASS, currentFilterFrecuency);
 
 // ================================================================
@@ -813,7 +813,7 @@ void update_speed(void)
     {
         // Serial.print("steps:");Serial.println(steps);
         dettach_halls();
-        speed_rpm = 30000.0*steps/(millis()-time_ref);
+        speed_rpm = 60000.0*steps/(millis()-time_ref);
         // Serial.print("speed_rpm:");Serial.println(speed_rpm);
 
         time_ref = millis();
