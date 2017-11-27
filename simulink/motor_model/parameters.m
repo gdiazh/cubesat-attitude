@@ -15,15 +15,15 @@ Ir1 = 0.5*(ro_r*Vr1)*(0.25e-2)^2;
 Ir2 = 0.5*(ro_r*Vr2)*((0.7e-2)^2+(0.25e-2)^2);
 Ir3 = 0.5*(ro_r*Vr3)*((1.65e-2)^2+(1.4e-2)^2);
 Ir4 = 0.5*(ro_r*Vr4)*(1.25e-2)^2;
-Irt = Ir1+Ir2+Ir3+Ir4
+Irt = Ir1+Ir2+Ir3+Ir4;
 
 %% Parametros Disco
 m_disc = 23e-3;
 rext = 9.5e-2;									%[m]
 rint = 2.5e-2;									%[m]
-Iw = 0.5*m_disc*(rext^2+rint^2)					%[Kgm^2]
+Iw = 0.5*m_disc*(rext^2+rint^2);				%[Kgm^2]
 
-I = Irt+Iw										%[Kgm^2]
+I = Irt+Iw;										%[Kgm^2]
 
 % Eletricos
 Rfn = 1.9;										%[Ohm]
@@ -32,15 +32,15 @@ R = 2*Rfn;										%[Ohm]
 L = (5e-4)*2;									%[H]
 
 % Modelo
-KM = 0.075;										%[Nm/A]
-B = 2.8645e-05;									%[Nm/rads^-1]
-Kv = 0.012;										%[V/rads^-1]
+KM = 0.0065;									%[Nm/A]
+B = 0.21e-05;								%[Nm/rads^-1]
+Kv = KM;										%[V/rads^-1]
 
 % Factores de conversion
 rad2rpm = 60/(2*pi);
 
-tau_m = I/B
-tau_e = L/R
+tau_m = I/B;
+tau_e = L/R;
 
 % A = 0.00050844;
 % B = 0.00050602;
