@@ -26,6 +26,7 @@ CHANGE_SPEED_GAINS = 17
 
 TORQUE_MODE = 0
 SPEED_MODE = 1
+POS_MODE = 2
 
 HDD_ZERO_SPEED = 1000
 MIN_VOLTAGE = 0
@@ -57,6 +58,8 @@ class CommandParser:
             self.command_code = [KEEP_ATTITUDE, attitude[0], attitude[1], attitude[2]]
         elif (command == "set-mode"):
             self.command_code = [SET_MODE, mode, 0, 0]
+        elif (command == "set-attitude-control"):
+            self.command_code = [SET_CONTROL_MODE, POS_MODE, 0, 0]
         elif (command == "set-speed-control"):
             self.command_code = [SET_CONTROL_MODE, SPEED_MODE, 0, 0]
         elif (command == "set-torque-control"):

@@ -69,10 +69,12 @@ class BTRosInterface:
         self.wGains_sub = rospy.Subscriber('/wGains', Float32MultiArray, self.set_wGains)
 
         #publishers
-        self.data1_pub = rospy.Publisher('/current_input', Float32, queue_size=70)
-        self.data2_pub = rospy.Publisher('/current_output', Float32, queue_size=70)
-        self.data3_pub = rospy.Publisher('/control_voltage', Float32, queue_size=70)
-        self.data4_pub = rospy.Publisher('/filtered_wheel_speed', Float32, queue_size=70)
+        self.data1_pub = rospy.Publisher('/yaw_setpoint', Float32, queue_size=70)
+        self.data2_pub = rospy.Publisher('/yaw_feedback', Float32, queue_size=70)
+        self.data3_pub = rospy.Publisher('/yaw_controlTorque', Float32, queue_size=70)
+        self.data4_pub = rospy.Publisher('/satellite_speed', Float32, queue_size=70)
+
+        self.cmd_yaw_pub = rospy.Publisher('/cmd_yaw', Float32, queue_size=70)
 
         self.cmd_speedX_pub = rospy.Publisher('/cmd_speedX', Float32, queue_size=70)
         self.cmd_torqueX_pub = rospy.Publisher('/cmd_torqueX', Float32, queue_size=70)
@@ -108,6 +110,8 @@ class BTRosInterface:
         self.data2_pub.unregister()
         self.data3_pub.unregister()
         self.data4_pub.unregister()
+
+        self.cmd_yaw_pub.unregister()
 
         self.cmd_speedX_pub.unregister()
         self.cmd_torqueX_pub.unregister()
@@ -182,13 +186,14 @@ class BTRosInterface:
                 if (packet[0]==1):
                     self.bt_receiver.reset()
                     #write data to file
-                    self.file_manager.save_data(packet, self.speed, self.torque, self.speed)
+                    self.file_manager.save_data(packet, self.speed, self.torque, self.voltage, self.attitude)
                     #publish data
                     data = self.file_manager.decode(packet)
                     self.data1_pub.publish(data[0])
                     self.data2_pub.publish(data[1])
                     self.data3_pub.publish(data[2])
                     self.data4_pub.publish(data[3])
+                    self.cmd_yaw_pub.publish(self.attitude[0])
                     self.cmd_speedX_pub.publish(self.speed[0])
                     self.cmd_torqueX_pub.publish(self.torque[0])
                     self.cmd_voltageX_pub.publish(self.voltage[0])

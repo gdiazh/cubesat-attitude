@@ -196,6 +196,7 @@ HddDriver hddy(ESC2_PWM_PIN_OUT, ESC2_DIR_PIN_OUT, 1000, 2000, &Serial);
 float cmdVoltageMx = MIN_VOLTAGE;
 float cmdTorqueMx = 0;
 float cmdSpeedMx = HDD_ZERO_SPEED;
+float cmdyawMx = 0;
 
 float cmdVoltageMy = MIN_VOLTAGE;
 float cmdTorqueMy = 0;
@@ -203,6 +204,7 @@ float cmdSpeedMy = HDD_ZERO_SPEED;
 
 #define TORQUE_MODE 0
 #define SPEED_MODE 1
+#define POS_MODE 2
 #define OPENLOOP_MODE 0
 #define CLOSELOOP_MODE 1
 
@@ -224,6 +226,20 @@ float filtered_speed = 0.0;
 float speedFilterFrecuency = 0.7; //[Hz]
 FilterOnePole lowpassFilter(LOWPASS, speedFilterFrecuency);
 float filtered_speed_calib = 0.0;
+
+// ================================================================
+// ===               Satellite speed                            ===
+// ================================================================
+unsigned long time_ref_pitch = 0;
+float satellite_speed = 0.0;
+float last_pitch = 0.0;
+
+// ================================================================
+// ===       PID Yaw Controller PARAMS                          ===
+// ================================================================
+double yawSetpointMx, yawInputMx, yawControlTorqueMx;
+double Kp_yaw=10, Ki_yaw=0.00, Kd_yaw=0.00;
+PID yawControllerMx(&yawInputMx, &yawControlTorqueMx, &yawSetpointMx, Kp_yaw, Ki_yaw, Kd_yaw, DIRECT);
 
 // ================================================================
 // ===       PID Speed Controller PARAMS                        ===
@@ -319,10 +335,16 @@ void setup() {
     // configure LED for output
     pinMode(LED_PIN, OUTPUT);
 
+    // Yaw Controller Initialization
+    yawInputMx = 0;
+    yawSetpointMx = 0.0;                      //[rad]
+    yawControllerMx.SetOutputLimits(0, 3.0);   //[Nm]
+    yawControllerMx.SetMode(AUTOMATIC);
+
     // Speed Controller Initialization
     speedInputMx = 0;
     speedSetpointMx = 0.0;                      //[RPM]
-    speedControllerMx.SetOutputLimits(0, 2.5);   //[Nm]
+    speedControllerMx.SetOutputLimits(0, 3.0);   //[Nm]
     speedControllerMx.SetMode(AUTOMATIC);
 
     // Current Controller Initialization
@@ -482,6 +504,16 @@ void loop() {
 
     readCommands();
 
+    //Satellite Speed Calculation
+    update_satellite_speed();
+
+    //Update Reference for Yaw Controller
+    yawSetpointMx = cmdyawMx;
+
+    //Yaw Controller Calculation
+    yawInputMx = ypr[1]+3.1415;
+    yawControllerMx.Compute();        //This update the yawControlTorqueMx variable
+
     //Update Reference for Speed Controller
     speedSetpointMx = cmdSpeedMx;
     // speedSetpointMy = cmdSpeedMy;
@@ -501,7 +533,11 @@ void loop() {
     speedControllerMx.Compute();        //This update the controlTorqueMx variable
 
     //Update Reference for Current Controller
-    if (controlMode == SPEED_MODE)
+    if (controlMode == POS_MODE)
+    {
+        currentSetpointMx = yawControlTorqueMx;//   /KM
+    }
+    else if (controlMode == SPEED_MODE)
     {
         currentSetpointMx = controlTorqueMx;//   /KM
     }
@@ -531,7 +567,7 @@ void loop() {
         hddx.rotate(controlVoltageMx);
         hddy.rotate(cmdVoltageMy);
     }
-    send_data(1, currentSetpointMx, currentInputMx, controlVoltageMx, filtered_speed_calib);
+    send_data(1, yawSetpointMx*57.2958, yawInputMx*57.2958, yawControlTorqueMx, satellite_speed*9.5493);
 }
 
 //---------------Comunication Methos-------------------------------------------------------------
@@ -722,12 +758,12 @@ void readCommands()
       cmdSpeedMx = command[1];
       cmdSpeedMy = command[2];
     }
-    /*else if (command[0]==KEEP_ATTITUDE)
+    else if (command[0]==KEEP_ATTITUDE)
     {
-      cmdYawSetpoint = command[1];
-      cmdPitchSetpoint = command[2];
-      cmdRollSetpoint = command[3];
-    }*/
+      cmdyawMx = command[1]*0.0175;
+      /*cmdPitchSetpoint = command[2];
+      cmdRollSetpoint = command[3];*/
+    }
     else if (command[0]==SET_MODE)
     {
       operationMode = command[1];
@@ -793,6 +829,7 @@ void readCommands()
   }
 }
 //---------------Sensor Methos-------------------------------------------------------------
+//---------------Hall efect Sensor Methos--------------------------------------------------
 void attach_halls(void)
 {
     attachInterrupt(digitalPinToInterrupt(HALL1), step, FALLING);
@@ -826,4 +863,12 @@ void update_speed(void)
 void step(void)
 {
     steps++;
+}
+
+//---------------Hall efect Sensor Methos--------------------------------------------------
+void update_satellite_speed(void)
+{
+    satellite_speed = 1000*(ypr[1]-last_pitch)/(millis()-time_ref_pitch);    //[rad/s]
+    time_ref_pitch = millis();
+    last_pitch = ypr[1];
 }
