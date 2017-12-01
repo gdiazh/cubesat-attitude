@@ -234,11 +234,14 @@ unsigned long time_ref_pitch = 0;
 float satellite_speed = 0.0;
 float last_pitch = 0.0;
 
+float sateliteFiltered_speed = 0.0;
+FilterOnePole satelliteSpeedFilter(LOWPASS, 0.8);
+
 // ================================================================
 // ===       PID Yaw Controller PARAMS                          ===
 // ================================================================
 double yawSetpointMx, yawInputMx, yawControlTorqueMx;
-double Kp_yaw=10, Ki_yaw=0.00, Kd_yaw=0.00;
+double Kp_yaw=0.21, Ki_yaw=0.00, Kd_yaw=0.00;
 PID yawControllerMx(&yawInputMx, &yawControlTorqueMx, &yawSetpointMx, Kp_yaw, Ki_yaw, Kd_yaw, DIRECT);
 
 // ================================================================
@@ -338,7 +341,7 @@ void setup() {
     // Yaw Controller Initialization
     yawInputMx = 0;
     yawSetpointMx = 0.0;                      //[rad]
-    yawControllerMx.SetOutputLimits(0, 3.0);   //[Nm]
+    yawControllerMx.SetOutputLimits(0, 2.0);   //[Nm]
     yawControllerMx.SetMode(AUTOMATIC);
 
     // Speed Controller Initialization
@@ -506,12 +509,13 @@ void loop() {
 
     //Satellite Speed Calculation
     update_satellite_speed();
+    sateliteFiltered_speed = satelliteSpeedFilter.input(satellite_speed);
 
     //Update Reference for Yaw Controller
     yawSetpointMx = cmdyawMx;
 
     //Yaw Controller Calculation
-    yawInputMx = ypr[1]+3.1415;
+    yawInputMx = ypr[0]+3.1415;
     yawControllerMx.Compute();        //This update the yawControlTorqueMx variable
 
     //Update Reference for Speed Controller
@@ -567,7 +571,7 @@ void loop() {
         hddx.rotate(controlVoltageMx);
         hddy.rotate(cmdVoltageMy);
     }
-    send_data(1, yawSetpointMx*57.2958, yawInputMx*57.2958, yawControlTorqueMx, satellite_speed*9.5493);
+    send_data(1, yawSetpointMx*57.2958, yawInputMx*57.2958, yawControlTorqueMx, sateliteFiltered_speed*9.5493);
 }
 
 //---------------Comunication Methos-------------------------------------------------------------
@@ -868,7 +872,7 @@ void step(void)
 //---------------Hall efect Sensor Methos--------------------------------------------------
 void update_satellite_speed(void)
 {
-    satellite_speed = 1000*(ypr[1]-last_pitch)/(millis()-time_ref_pitch);    //[rad/s]
+    satellite_speed = 1000*(ypr[0]-last_pitch)/(millis()-time_ref_pitch);    //[rad/s]
     time_ref_pitch = millis();
-    last_pitch = ypr[1];
+    last_pitch = ypr[0];
 }
