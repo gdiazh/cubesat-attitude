@@ -243,6 +243,7 @@ FilterOnePole satelliteSpeedFilter(LOWPASS, 0.8);
 double yawSetpointMx, yawInputMx, yawControlTorqueMx;
 double Kp_yaw=0.21, Ki_yaw=0.00, Kd_yaw=0.00;
 PID yawControllerMx(&yawInputMx, &yawControlTorqueMx, &yawSetpointMx, Kp_yaw, Ki_yaw, Kd_yaw, DIRECT);
+double sat_turns = 0;
 
 // ================================================================
 // ===       PID Speed Controller PARAMS                        ===
@@ -507,15 +508,25 @@ void loop() {
 
     readCommands();
 
+    //Angle domain transformation
+    if (ypr[0]-last_pitch<-5.2359)
+    {
+    	sat_turns++;	//Una vuelta en sentido horario
+    }
+    else if (ypr[0]-last_pitch>5.2359)
+    {
+    	sat_turns--;	//Una vuelta en sentido antihorario
+    }
+
     //Satellite Speed Calculation
     update_satellite_speed();
     sateliteFiltered_speed = satelliteSpeedFilter.input(satellite_speed);
 
     //Update Reference for Yaw Controller
-    yawSetpointMx = cmdyawMx;
+    yawSetpointMx = cmdyawMx+6.2831*sat_turns;
 
     //Yaw Controller Calculation
-    yawInputMx = ypr[0]+3.1415;
+    yawInputMx = ypr[0]+1.5707+6.2831*sat_turns;
     yawControllerMx.Compute();        //This update the yawControlTorqueMx variable
 
     //Update Reference for Speed Controller
@@ -571,7 +582,7 @@ void loop() {
         hddx.rotate(controlVoltageMx);
         hddy.rotate(cmdVoltageMy);
     }
-    send_data(1, yawSetpointMx*57.2958, yawInputMx*57.2958, yawControlTorqueMx, sateliteFiltered_speed*9.5493);
+    send_data(1, yawSetpointMx, yawInputMx, yawControlTorqueMx, sateliteFiltered_speed);
 }
 
 //---------------Comunication Methos-------------------------------------------------------------

@@ -189,10 +189,10 @@ class BTRosInterface:
                     self.file_manager.save_data(packet, self.speed, self.torque, self.voltage, self.attitude)
                     #publish data
                     data = self.file_manager.decode(packet)
-                    self.data1_pub.publish(data[0])
-                    self.data2_pub.publish(data[1])
+                    self.data1_pub.publish(data[0]*57.2958)
+                    self.data2_pub.publish(data[1]*57.2958)
                     self.data3_pub.publish(data[2])
-                    self.data4_pub.publish(data[3])
+                    self.data4_pub.publish(data[3]*9.5493)
                     self.cmd_yaw_pub.publish(self.attitude[0])
                     self.cmd_speedX_pub.publish(self.speed[0])
                     self.cmd_torqueX_pub.publish(self.torque[0])
