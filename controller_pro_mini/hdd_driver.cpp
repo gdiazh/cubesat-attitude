@@ -6,30 +6,6 @@
 
 #include "hdd_driver.h"
 
-//-------------------------- Define Math functions -----------------------------------------
-float HddDriver::torque2pwm(float value, float toLow, float toHigh)
-{
-  float fromLow = 0;
-  float fromHigh = MAX_TORQUE;
-  float new_range = toHigh-toLow;
-  float old_range = fromHigh - fromLow;
-  if (value < -fromHigh || value > fromHigh)
-  {
-    // debug_port_->println("Warning value out of range");
-    value = fromHigh;
-  }
-  if (value<0) value = -value;
-  float new_value = (new_range/old_range)*(value-fromLow)+toLow;
-  return new_value;
-}
-
-//-------------------------- Define Handlers functions -----------------------------------------------
-float HddDriver::motor_dynamic(float torque)
-{
-    int vel = torque; //TO DO: REPLACE FOR PARTICULAR DYNAMICS: w = Te/(Js+B)
-    return vel;
-}
-
 void HddDriver::init_esc()
 {
     esc_.writeMicroseconds(1000);   //1000[us] = 1[ms]
@@ -38,11 +14,11 @@ void HddDriver::init_esc()
 
 int HddDriver::voltage_to_pwm(float voltage)
 {
-    float pwm = 58.8536*voltage*voltage-205.0240*voltage+1618.0829;
+    float pwm = 58.8536*voltage*voltage-205.0240*abs(voltage)+1618.0829;
     int pwm_ms = (int) pwm;
-    if (voltage>4.8)
+    if (abs(voltage)>4.8)
         return 2000;
-    else if (voltage<2)
+    else if (abs(voltage)<2)
         return 1000;
     else
         return pwm_ms;
@@ -89,9 +65,9 @@ void HddDriver::rotate(float voltage)
     // debug_port_->println(output_vars_.output_voltage);
     // debug_port_->print("output_dir: ");
     // debug_port_->println(output_vars_.output_dir);
+    if (output_vars_.output_pwm>=min_pwm_ && output_vars_.output_pwm<=max_pwm_) esc_.writeMicroseconds(output_vars_.output_pwm);
     if (output_vars_.output_dir == 1) digitalWrite(esc_dir_pin_, LOW);
     else digitalWrite(esc_dir_pin_, HIGH);
-    if (output_vars_.output_pwm>=min_pwm_ && output_vars_.output_pwm<=max_pwm_) esc_.writeMicroseconds(output_vars_.output_pwm);
     // esc_.writeMicroseconds((int) velocity);// ---------------------------------------------------------------------------------TEST!!!!!!!!!!!!!!!!!!!!!!!!!-------------------------------------
 }
 

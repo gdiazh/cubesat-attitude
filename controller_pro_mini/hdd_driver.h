@@ -79,11 +79,7 @@ public:
 private:
     // methods
     
-    // Declaration for Math functions
-    float torque2pwm(float value, float toLow, float toHigh);
-
     // Declaration of Output Handlers
-    float motor_dynamic(float torque);
     int voltage_to_pwm(float voltage);
     uint8_t direction_handler(float voltage);
 };

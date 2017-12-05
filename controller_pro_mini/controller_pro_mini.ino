@@ -241,7 +241,7 @@ FilterOnePole satelliteSpeedFilter(LOWPASS, 0.8);
 // ===       PID Yaw Controller PARAMS                          ===
 // ================================================================
 double yawSetpointMx, yawInputMx, yawControlTorqueMx;
-double Kp_yaw=0.21, Ki_yaw=0.00, Kd_yaw=0.00;
+double Kp_yaw=0.202, Ki_yaw=0.00, Kd_yaw=0.00;
 PID yawControllerMx(&yawInputMx, &yawControlTorqueMx, &yawSetpointMx, Kp_yaw, Ki_yaw, Kd_yaw, DIRECT);
 double sat_turns = 0;
 
@@ -260,19 +260,34 @@ double Kp_imx=3.961, Ki_imx=10, Kd_imx=0;
 PID currentControllerMx(&currentInputMx, &controlVoltageMx, &currentSetpointMx, Kp_imx, Ki_imx, Kd_imx, DIRECT);
 
 // ================================================================
+// ===       PID Current Controller PARAMS, Motor y             ===
+// ================================================================
+double currentSetpointMy, currentInputMy, controlVoltageMy;
+double Kp_imy=1, Ki_imy=0, Kd_imy=0;
+PID currentControllerMy(&currentInputMy, &controlVoltageMy, &currentSetpointMy, Kp_imy, Ki_imy, Kd_imy, DIRECT);
+
+// ================================================================
 // ===               Comunication                               ===
 // ================================================================
 uint8_t Timeout = 0;
 uint8_t data_id = 0;
 
 // ================================================================
-// ===               Current Sensor                             ===
+// ===               Current Sensor Mx                          ===
 // ================================================================
-#define CURRENT_SENSOR A2
+#define CURRENT_SENSOR_Mx A2
 float current = 0;
 float filtered_current = 0.0;
 float currentFilterFrecuency = 0.5; //[Hz]
 FilterOnePole currentlowpassFilter(LOWPASS, currentFilterFrecuency);
+
+// ================================================================
+// ===               Current Sensor My                          ===
+// ================================================================
+#define CURRENT_SENSOR_My A3
+float current_my = 0;
+float filtered_current_my = 0.0;
+FilterOnePole currentlowpassFilterMy(LOWPASS, currentFilterFrecuency);
 
 // ================================================================
 // ===                      INITIAL SETUP                       ===
@@ -341,28 +356,35 @@ void setup() {
 
     // Yaw Controller Initialization
     yawInputMx = 0;
-    yawSetpointMx = 0.0;                      //[rad]
-    yawControllerMx.SetOutputLimits(0, 2.0);   //[Nm]
+    yawSetpointMx = 0.0;                      	  //[rad]
+    yawControllerMx.SetOutputLimits(-2.0, 2.0);   //[Nm]
     yawControllerMx.SetMode(AUTOMATIC);
 
     // Speed Controller Initialization
     speedInputMx = 0;
-    speedSetpointMx = 0.0;                      //[RPM]
-    speedControllerMx.SetOutputLimits(0, 3.0);   //[Nm]
+    speedSetpointMx = 0.0;                      	//[RPM]
+    speedControllerMx.SetOutputLimits(-3.0, 3.0);   //[Nm]
     speedControllerMx.SetMode(AUTOMATIC);
 
-    // Current Controller Initialization
+    // Current Controller Mx Initialization
     currentInputMx = 0;
-    currentSetpointMx = 0.0;                        //[A]
+    currentSetpointMx = 0.0;                    //[A]
     currentControllerMx.SetOutputLimits(0, 5); //[V]
     currentControllerMx.SetMode(AUTOMATIC);
+
+    // Current Controller My Initialization
+    currentInputMy = 0;
+    currentSetpointMy = 0.0;                    //[A]
+    currentControllerMy.SetOutputLimits(0, 5); //[V]
+    currentControllerMy.SetMode(AUTOMATIC);
 
     //Hall Encoder pins
     pinMode(HALL1, INPUT);
     attach_halls();
 
-    //Current sensor
-    pinMode(CURRENT_SENSOR, INPUT);
+    //Current sensors
+    pinMode(CURRENT_SENSOR_Mx, INPUT);
+    pinMode(CURRENT_SENSOR_My, INPUT);
 
 
     //Init HDD
@@ -559,17 +581,28 @@ void loop() {
     else if (controlMode == TORQUE_MODE)
     {
         currentSetpointMx = cmdTorqueMx;//      /KM
+        currentSetpointMy = cmdTorqueMy;//      /KM
     }
 
-    //Current Calculation
-    float current_raw = analogRead(CURRENT_SENSOR);
+    //Current Mx Calculations
+    float current_raw = analogRead(CURRENT_SENSOR_Mx);
     if (current_raw>=511) current = (current_raw-511)*0.06;
     else current = 0;
     filtered_current = currentlowpassFilter.input(current)-0.14;     //[A]
 
-    //Current Controller Calculation
+    //Current My Calculations
+    float current_raw_my = analogRead(CURRENT_SENSOR_My);
+    if (current_raw_my>=511) current_my = (current_raw_my-511)*0.06;
+    else current_my = 0;
+    filtered_current_my = currentlowpassFilterMy.input(current_my)-0.14;     //[A]
+
+    //Current Controller Mx Calculation
     currentInputMx = filtered_current;
     currentControllerMx.Compute();      //This update the controlVoltageMx variable
+
+    //Current Controller My Calculation
+    currentInputMy = filtered_current_my;
+    currentControllerMy.Compute();      //This update the controlVoltageMy variable
 
     //Set Motor Voltage Based on Operation Mode
     if (operationMode == OPENLOOP_MODE)      //Open Loop
@@ -580,9 +613,9 @@ void loop() {
     else if (operationMode == CLOSELOOP_MODE) //Close Loop
     {
         hddx.rotate(controlVoltageMx);
-        hddy.rotate(cmdVoltageMy);
+        hddy.rotate(controlVoltageMy);
     }
-    send_data(1, yawSetpointMx, yawInputMx, yawControlTorqueMx, sateliteFiltered_speed);
+    send_data(1, currentSetpointMy, currentInputMy, controlVoltageMy, sateliteFiltered_speed);
 }
 
 //---------------Comunication Methos-------------------------------------------------------------
