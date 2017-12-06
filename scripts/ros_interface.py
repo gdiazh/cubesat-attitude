@@ -69,10 +69,10 @@ class BTRosInterface:
         self.wGains_sub = rospy.Subscriber('/wGains', Float32MultiArray, self.set_wGains)
 
         #publishers
-        self.data1_pub = rospy.Publisher('/current_setpoint', Float32, queue_size=70)
-        self.data2_pub = rospy.Publisher('/current_feedback', Float32, queue_size=70)
-        self.data3_pub = rospy.Publisher('/controlVoltage', Float32, queue_size=70)
-        self.data4_pub = rospy.Publisher('/satellite_speed', Float32, queue_size=70)
+        self.data1_pub = rospy.Publisher('/current_setpointMx', Float32, queue_size=70)
+        self.data2_pub = rospy.Publisher('/current_feedbackMx', Float32, queue_size=70)
+        self.data3_pub = rospy.Publisher('/current_setpointMy', Float32, queue_size=70)
+        self.data4_pub = rospy.Publisher('/current_feedbackMy', Float32, queue_size=70)
 
         self.cmd_yaw_pub = rospy.Publisher('/cmd_yaw', Float32, queue_size=70)
 
@@ -189,10 +189,10 @@ class BTRosInterface:
                     self.file_manager.save_data(packet, self.speed, self.torque, self.voltage, self.attitude)
                     #publish data
                     data = self.file_manager.decode(packet)
-                    self.data1_pub.publish(data[0]*57.2958)
-                    self.data2_pub.publish(data[1]*57.2958)
+                    self.data1_pub.publish(data[0])#*57.2958
+                    self.data2_pub.publish(data[1])#*57.2958
                     self.data3_pub.publish(data[2])
-                    self.data4_pub.publish(data[3]*9.5493)
+                    self.data4_pub.publish(data[3])#*9.5493
                     self.cmd_yaw_pub.publish(self.attitude[0])
                     self.cmd_speedX_pub.publish(self.speed[0])
                     self.cmd_torqueX_pub.publish(self.torque[0])

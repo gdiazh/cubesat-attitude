@@ -180,7 +180,7 @@ void dmpDataReady() {
 #define ESC_PWM_PIN_OUT 5
 #define ESC_DIR_PIN_OUT A1
 
-#define ESC2_PWM_PIN_OUT 6
+#define ESC2_PWM_PIN_OUT 9
 #define ESC2_DIR_PIN_OUT A0
 
 #define ESC3_PWM_PIN_OUT 9
@@ -263,7 +263,7 @@ PID currentControllerMx(&currentInputMx, &controlVoltageMx, &currentSetpointMx, 
 // ===       PID Current Controller PARAMS, Motor y             ===
 // ================================================================
 double currentSetpointMy, currentInputMy, controlVoltageMy;
-double Kp_imy=1, Ki_imy=0, Kd_imy=0;
+double Kp_imy=4.5, Ki_imy=8, Kd_imy=0;
 PID currentControllerMy(&currentInputMy, &controlVoltageMy, &currentSetpointMy, Kp_imy, Ki_imy, Kd_imy, DIRECT);
 
 // ================================================================
@@ -400,7 +400,7 @@ void setup() {
 
 void loop() {
     // if programming failed, don't try to do anything
-    if (!dmpReady) return;
+    // if (!dmpReady) return;
 
     // wait for MPU interrupt or extra packet(s) available
     while (!mpuInterrupt && fifoCount < packetSize) {
@@ -594,7 +594,7 @@ void loop() {
     float current_raw_my = analogRead(CURRENT_SENSOR_My);
     if (current_raw_my>=511) current_my = (current_raw_my-511)*0.06;
     else current_my = 0;
-    filtered_current_my = currentlowpassFilterMy.input(current_my)-0.14;     //[A]
+    filtered_current_my = currentlowpassFilterMy.input(current_my);  //[A]
 
     //Current Controller Mx Calculation
     currentInputMx = filtered_current;
@@ -615,7 +615,7 @@ void loop() {
         hddx.rotate(controlVoltageMx);
         hddy.rotate(controlVoltageMy);
     }
-    send_data(1, currentSetpointMy, currentInputMy, controlVoltageMy, sateliteFiltered_speed);
+    send_data(1, currentSetpointMx, currentInputMx, currentSetpointMy, currentInputMy);
 }
 
 //---------------Comunication Methos-------------------------------------------------------------
