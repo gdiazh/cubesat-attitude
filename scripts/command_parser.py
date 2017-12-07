@@ -54,7 +54,7 @@ class CommandParser:
             self.command_code = [SET_TORQUE, torque[0], torque[1], torque[2]]
         elif (command == "set-speed"):
             self.command_code = [SET_SPEED, speed[0], speed[1], speed[2]]
-        elif (command == "keep-attitude"):
+        elif (command == "set-attitude"):
             self.command_code = [KEEP_ATTITUDE, attitude[0], attitude[1], attitude[2]]
         elif (command == "set-mode"):
             self.command_code = [SET_MODE, mode, 0, 0]
@@ -79,6 +79,10 @@ class CommandParser:
         elif (command == "print-speed"):
             self.command_code = [PRINT_SPEED, 0, 0, 0]
         elif (command == "automatic-mode"):
+            self.command_code = [AUTOMATIC_MODE, 0, 0, 0]
+        elif (command == "i-pid"):
+            self.command_code = [SET_TORQUE, torque[0], torque[1], torque[2]]
+            self.command_code = [SET_CONTROL_MODE, TORQUE_MODE, 0, 0]
             self.command_code = [AUTOMATIC_MODE, 0, 0, 0]
         else:
             self.command_code = [-1,-1,-1,-1]

@@ -26,8 +26,9 @@ int HddDriver::voltage_to_pwm(float voltage)
 
 uint8_t HddDriver::direction_handler(float voltage)
 {
-    if (voltage>=0) return 1;
-    else return 0;
+    if (voltage>=2.0) return 1;
+    else if (voltage<=-2.0) return 0;
+    else return 2;
 }
 
 //-------------------------- Public High Level Abstract Methods --------------------------
@@ -67,7 +68,8 @@ void HddDriver::rotate(float voltage)
     // debug_port_->println(output_vars_.output_dir);
     if (output_vars_.output_pwm>=min_pwm_ && output_vars_.output_pwm<=max_pwm_) esc_.writeMicroseconds(output_vars_.output_pwm);
     if (output_vars_.output_dir == 1) digitalWrite(esc_dir_pin_, LOW);
-    else digitalWrite(esc_dir_pin_, HIGH);
+    else if (output_vars_.output_dir == 0) digitalWrite(esc_dir_pin_, HIGH);
+    // else digitalWrite(esc_dir_pin_, HIGH);
     // esc_.writeMicroseconds((int) velocity);// ---------------------------------------------------------------------------------TEST!!!!!!!!!!!!!!!!!!!!!!!!!-------------------------------------
 }
 

@@ -69,10 +69,14 @@ class BTRosInterface:
         self.wGains_sub = rospy.Subscriber('/wGains', Float32MultiArray, self.set_wGains)
 
         #publishers
-        self.data1_pub = rospy.Publisher('/current_setpointMx', Float32, queue_size=70)
-        self.data2_pub = rospy.Publisher('/current_feedbackMx', Float32, queue_size=70)
-        self.data3_pub = rospy.Publisher('/current_setpointMy', Float32, queue_size=70)
-        self.data4_pub = rospy.Publisher('/current_feedbackMy', Float32, queue_size=70)
+        # self.data1_pub = rospy.Publisher('/yawSetpointMx', Float32, queue_size=70)
+        # self.data2_pub = rospy.Publisher('/yawInputMx', Float32, queue_size=70)
+        # self.data3_pub = rospy.Publisher('/yawControlTorqueMx2', Float32, queue_size=70)
+        # self.data4_pub = rospy.Publisher('/filtered_current', Float32, queue_size=70)
+        self.data1_pub = rospy.Publisher('/currentSetpointMx', Float32, queue_size=70)
+        self.data2_pub = rospy.Publisher('/currentInputMx', Float32, queue_size=70)
+        self.data3_pub = rospy.Publisher('/controlVoltageMx', Float32, queue_size=70)
+        self.data4_pub = rospy.Publisher('/yawControlTorqueMx2', Float32, queue_size=70)
 
         self.cmd_yaw_pub = rospy.Publisher('/cmd_yaw', Float32, queue_size=70)
 
