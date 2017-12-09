@@ -81,8 +81,10 @@ class CommandParser:
         elif (command == "automatic-mode"):
             self.command_code = [AUTOMATIC_MODE, 0, 0, 0]
         elif (command == "i-pid"):
-            self.command_code = [SET_TORQUE, torque[0], torque[1], torque[2]]
             self.command_code = [SET_CONTROL_MODE, TORQUE_MODE, 0, 0]
+            self.command_code = [AUTOMATIC_MODE, 0, 0, 0]
+        elif (command == "yaw-pid"):
+            self.command_code = [SET_CONTROL_MODE, POS_MODE, 0, 0]
             self.command_code = [AUTOMATIC_MODE, 0, 0, 0]
         else:
             self.command_code = [-1,-1,-1,-1]

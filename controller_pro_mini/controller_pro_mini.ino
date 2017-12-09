@@ -170,7 +170,7 @@ void dmpDataReady() {
 #define STOP_Z 14
 #define SET_CONTROL_MODE 15
 #define CHANGE_CURRENT_GAINS 16
-#define  CHANGE_SPEED_GAINS 17
+#define CHANGE_SPEED_GAINS 17
 
 // ================================================================
 // ===               Actuators params                           ===
@@ -189,16 +189,22 @@ void dmpDataReady() {
 #define HDD_ZERO_SPEED 1000
 #define MIN_VOLTAGE 0.0
 
+#define MOTOR_STOPPED 0
+#define MOTOR_HOR 1
+#define MOTOR_ANT 2
+
 /*Device Control Handler*/
 HddDriver hddx(ESC_PWM_PIN_OUT, ESC_DIR_PIN_OUT, 1000, 2000, &Serial);
 HddDriver hddy(ESC2_PWM_PIN_OUT, ESC2_DIR_PIN_OUT, 1000, 2000, &Serial);
 
 float cmdVoltageMx = MIN_VOLTAGE;
-float last_cmdVoltageMx = MIN_VOLTAGE;
+float lastIStpt = MIN_VOLTAGE;
 int8_t currentxSign = 1;
 float cmdTorqueMx = 0;
 float cmdSpeedMx = HDD_ZERO_SPEED;
 float cmdyawMx = 0;
+uint8_t motorx_state = 0;
+uint8_t motorx_ref_dir_hasChange = 1;
 
 float cmdVoltageMy = MIN_VOLTAGE;
 float cmdTorqueMy = 0;
@@ -244,7 +250,7 @@ FilterOnePole satelliteSpeedFilter(LOWPASS, 0.2);
 // ===       PID Yaw Controller PARAMS                          ===
 // ================================================================
 double yawSetpointMx, yawInputMx, yawControlTorqueMx, yawControlTorqueMx2;
-double Kp_yaw=0.102, Ki_yaw=0.00, Kd_yaw=0.01;
+double Kp_yaw=0.9, Ki_yaw=0.00, Kd_yaw=0.1;
 PID yawControllerMx(&yawInputMx, &yawControlTorqueMx, &yawSetpointMx, Kp_yaw, Ki_yaw, Kd_yaw, DIRECT);
 double sat_turns = 0;
 
@@ -252,7 +258,7 @@ double sat_turns = 0;
 // ===       PID Pitch Controller PARAMS                        ===
 // ================================================================
 double pitchSetpointMx, pitchInputMx, pitchControlTorqueMx, pitchControlTorqueMx2;
-double Kp_pitch=0.102, Ki_pitch=0.00, Kd_pitch=0.01;
+double Kp_pitch=0.5, Ki_pitch=0.00, Kd_pitch=0.01;
 
 // ================================================================
 // ===       PID Speed Controller PARAMS                        ===
@@ -265,8 +271,15 @@ PID speedControllerMx(&speedInputMx, &controlTorqueMx, &speedSetpointMx, Kp_wx, 
 // ===       PID Current Controller PARAMS, Motor x             ===
 // ================================================================
 double currentSetpointMx, currentInputMx, controlVoltageMx;
-double Kp_imx=3.9, Ki_imx=5, Kd_imx=0;
+double Kp_imx=4, Ki_imx=8, Kd_imx=0;
 PID currentControllerMx(&currentInputMx, &controlVoltageMx, &currentSetpointMx, Kp_imx, Ki_imx, Kd_imx, DIRECT);
+
+// ================================================================
+// ===       PID Current Controller PARAMS, Motor x-N           ===
+// ================================================================
+double currentSetpointMxN, currentInputMxN, controlVoltageMxN, controlVoltageMxB;
+double Kp_imxN=4, Ki_imxN=8, Kd_imxN=0;
+PID currentControllerMxN(&currentInputMxN, &controlVoltageMxN, &currentSetpointMxN, Kp_imxN, Ki_imxN, Kd_imxN, DIRECT);
 
 // ================================================================
 // ===       PID Current Controller PARAMS, Motor y             ===
@@ -287,7 +300,7 @@ uint8_t data_id = 0;
 #define CURRENT_SENSOR_Mx A2
 float current = 0;
 float filtered_current = 0.0;
-float currentFilterFrecuency = 0.5; //[Hz]
+float currentFilterFrecuency = 0.6; //[Hz]
 FilterOnePole currentlowpassFilter(LOWPASS, currentFilterFrecuency);
 
 // ================================================================
@@ -366,7 +379,7 @@ void setup() {
     // Yaw Controller Initialization
     yawInputMx = 0;
     yawSetpointMx = 0.0;                      	  //[rad]
-    yawControllerMx.SetOutputLimits(-2.0, 2.0);   //[Nm]
+    yawControllerMx.SetOutputLimits(-0.45, 0.33);   //[Nm]
     yawControllerMx.SetMode(AUTOMATIC);
 
     // Speed Controller Initialization
@@ -378,8 +391,14 @@ void setup() {
     // Current Controller Mx Initialization
     currentInputMx = 0;
     currentSetpointMx = 0.0;                    //[A]
-    currentControllerMx.SetOutputLimits(-5, 5); //[V]
+    currentControllerMx.SetOutputLimits(1.9, 4.8); //[V]
     currentControllerMx.SetMode(AUTOMATIC);
+
+    // Current Controller MxN Initialization
+    currentInputMxN = 0;
+    currentSetpointMxN = 0.0;                     //[A]
+    currentControllerMxN.SetOutputLimits(-4.8, -1.9); //[V]
+    currentControllerMxN.SetMode(AUTOMATIC);
 
     // Current Controller My Initialization
     currentInputMy = 0;
@@ -540,11 +559,11 @@ void loop() {
     readCommands();
 
     //Angle domain transformation
-    if (ypr[0]-last_ypr0<-5.2359)
+    if (last_ypr0>3.05 && ypr[0]<0)
     {
     	sat_turns++;	//Una vuelta en sentido horario
     }
-    else if (ypr[0]-last_ypr0>5.2359)
+    else if (last_ypr0<-3.05 && ypr[0]>0)
     {
     	sat_turns--;	//Una vuelta en sentido antihorario
     }
@@ -552,8 +571,10 @@ void loop() {
     last_ypr0 = ypr[0];
 
     //Update Reference for Yaw Controller
-    yawSetpointMx = cmdyawMx+6.2831*sat_turns;
-    yawInputMx = ypr[0]+1.5707+6.2831*sat_turns;
+    // yawSetpointMx = cmdyawMx+6.2831*sat_turns;
+    // yawInputMx = ypr[0]+1.5707+6.2831*sat_turns;
+    yawSetpointMx = cmdyawMx;
+    yawInputMx = ypr[0]+3.1415;
 
     //Satellite Speed Calculation
     update_satellite_speed();
@@ -579,32 +600,36 @@ void loop() {
     //Speed Controller Calculation
     speedInputMx = filtered_speed_calib;
     // speedControllerMx.Compute();        //This update the controlTorqueMx variable
-    yawControlTorqueMx2 = Kp_yaw*(yawSetpointMx-yawInputMx) + Kd_yaw*(sateliteFiltered_speed);
-    if (yawControlTorqueMx2>3)
+    yawControlTorqueMx2 = Kp_yaw*(yawSetpointMx-yawInputMx)- Kd_yaw*(sateliteFiltered_speed);
+    if (yawSetpointMx-yawInputMx>=0) yawControlTorqueMx2 = yawControlTorqueMx2+0.1;
+    else yawControlTorqueMx2 = 0.1;
+    if (yawControlTorqueMx2>0.3)
     {
-    	yawControlTorqueMx2 = 3;
+    	yawControlTorqueMx2 = 0.3;
     }
-    else if (yawControlTorqueMx2<-3)
+    else if (yawControlTorqueMx2<-0.1)
     {
-    	yawControlTorqueMx2 = -3;
+    	yawControlTorqueMx2 = -0.1;
     }
 
     //pitch controller
-    pitchControlTorqueMx2 = Kp_pitch*(pitchSetpointMx-pitchInputMx);
-    if (pitchControlTorqueMx2>3)
+    // pitchControlTorqueMx2 = Kp_pitch*(pitchSetpointMx-pitchInputMx);
+    pitchControlTorqueMx2 = -Kp_pitch*(yawSetpointMx-yawInputMx);
+    if (pitchControlTorqueMx2>0.5)
     {
-    	pitchControlTorqueMx2 = 3;
+    	pitchControlTorqueMx2 = 0.5;
     }
-    else if (pitchControlTorqueMx2<-3)
+    else if (pitchControlTorqueMx2<0)
     {
-    	pitchControlTorqueMx2 = -3;
+    	pitchControlTorqueMx2 = 0;
     }
 
     //Update Reference for Current Controller
     if (controlMode == POS_MODE)
     {
         currentSetpointMx = yawControlTorqueMx2;//   /KM
-        // currentSetpointMy = pitchControlTorqueMx2;//   /KM
+        currentSetpointMxN = yawControlTorqueMx2;//   /KM
+        currentSetpointMy = pitchControlTorqueMx2;//   /KM
     }
     else if (controlMode == SPEED_MODE)
     {
@@ -613,6 +638,7 @@ void loop() {
     else if (controlMode == TORQUE_MODE)
     {
         currentSetpointMx = cmdTorqueMx;//      /KM
+        currentSetpointMxN = cmdTorqueMx;//      /KM
         currentSetpointMy = cmdTorqueMy;//      /KM
     }
 
@@ -620,7 +646,22 @@ void loop() {
     float current_raw = analogRead(CURRENT_SENSOR_Mx);
     if (current_raw>=511) current = (current_raw-511)*0.06;
     else current = 0;
-    filtered_current = currentlowpassFilter.input(current)-0.08;     //[A]
+    filtered_current = currentlowpassFilter.input(current);     //[A]
+
+    //motor state
+    if (filtered_current<=0.16)
+    {
+    	motorx_state = MOTOR_STOPPED;
+    }
+    else
+    {
+    	motorx_state = MOTOR_ANT;
+    }
+
+    if ((lastIStpt>=0 && currentSetpointMx<0)||(lastIStpt<0 && currentSetpointMx>=0))
+    {
+    	motorx_ref_dir_hasChange = 1;
+    }
 
     //Current My Calculations
     float current_raw_my = analogRead(CURRENT_SENSOR_My);
@@ -629,29 +670,34 @@ void loop() {
     filtered_current_my = currentlowpassFilterMy.input(current_my);  //[A]
 
     //Current Controller Mx Calculation
-    // currentInputMx = filtered_current;
-    /*if (cmdVoltageMx-last_cmdVoltageMx>3 || cmdVoltageMx-last_cmdVoltageMx<-3)
+    if (motorx_ref_dir_hasChange==1 && filtered_speed_calib<=400)
     {
-    	currentxSign = -currentxSign;
+    	if (currentSetpointMx>=0) currentxSign=1;
+    	else currentxSign=-1;
+    	motorx_ref_dir_hasChange = 0;
     }
-    currentInputMx = currentInputMx*currentxSign;*/
-    if (currentSetpointMx>=0)// && filtered_current<=0.01)
-    {
-    	currentInputMx = filtered_current;
-    	// currentxSign = 1;
-    }
-    else //if (currentSetpointMx<0 && filtered_current<=0.01)
-    {
-    	currentInputMx = -filtered_current; 
-    	// currentxSign = -1;
-    }
-    // currentInputMx = currentInputMx*currentxSign;
-    last_cmdVoltageMx = cmdVoltageMx;
+    currentInputMx = filtered_current*currentxSign;
+    currentInputMxN = filtered_current*currentxSign;
+    lastIStpt = currentSetpointMx;
+
     currentControllerMx.Compute();      //This update the controlVoltageMx variable
+    currentControllerMxN.Compute();      //This update the controlVoltageMxN variable
 
     //Current Controller My Calculation
     currentInputMy = filtered_current_my;
     currentControllerMy.Compute();      //This update the controlVoltageMy variable
+    if (motorx_ref_dir_hasChange==1)
+    {
+    	controlVoltageMxB = 0;
+    }
+    else if (currentSetpointMx>=0)
+    {
+    	controlVoltageMxB = controlVoltageMx;
+    }
+    else
+    {
+    	controlVoltageMxB = controlVoltageMxN;
+    }
 
     //Set Motor Voltage Based on Operation Mode
     if (operationMode == OPENLOOP_MODE)      //Open Loop
@@ -661,11 +707,11 @@ void loop() {
     }
     else if (operationMode == CLOSELOOP_MODE) //Close Loop
     {
-        hddx.rotate(controlVoltageMx);
+        hddx.rotate(controlVoltageMxB);
         hddy.rotate(controlVoltageMy);
     }
-    // send_data(1, yawSetpointMx, yawInputMx, yawControlTorqueMx2, filtered_current);
-    send_data(1, currentSetpointMx, currentInputMx, controlVoltageMx, cmdVoltageMx-last_cmdVoltageMx);
+    send_data(1, yawSetpointMx, yawInputMx, currentSetpointMx, currentInputMx);
+    // send_data(1, currentSetpointMx, currentInputMx, motorx_ref_dir_hasChange, controlVoltageMxB);
 }
 
 //---------------Comunication Methos-------------------------------------------------------------
