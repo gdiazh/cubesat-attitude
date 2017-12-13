@@ -71,12 +71,12 @@ class BTRosInterface:
         #publishers
         self.data1_pub = rospy.Publisher('/yawSetpointMx', Float32, queue_size=70)
         self.data2_pub = rospy.Publisher('/yawInputMx', Float32, queue_size=70)
-        self.data3_pub = rospy.Publisher('/currentSetpointMx', Float32, queue_size=70)
-        self.data4_pub = rospy.Publisher('/currentSetpointMxN', Float32, queue_size=70)
-        # self.data1_pub = rospy.Publisher('/currentSetpointMx', Float32, queue_size=70)
-        # self.data2_pub = rospy.Publisher('/currentInputMx', Float32, queue_size=70)
-        # self.data3_pub = rospy.Publisher('/controlVoltageMx', Float32, queue_size=70)
-        # self.data4_pub = rospy.Publisher('/motor_state', Float32, queue_size=70)
+        self.data3_pub = rospy.Publisher('/speed', Float32, queue_size=70)
+        self.data4_pub = rospy.Publisher('/wheelxSpeed', Float32, queue_size=70)
+        self.data5_pub = rospy.Publisher('/current_my', Float32, queue_size=70)
+        self.data6_pub = rospy.Publisher('/time', Float32, queue_size=70)
+        self.data7_pub = rospy.Publisher('/currentSetpointMy', Float32, queue_size=70)
+        self.data8_pub = rospy.Publisher('/currentInputMy', Float32, queue_size=70)
 
         self.cmd_yaw_pub = rospy.Publisher('/cmd_yaw', Float32, queue_size=70)
 
@@ -114,6 +114,10 @@ class BTRosInterface:
         self.data2_pub.unregister()
         self.data3_pub.unregister()
         self.data4_pub.unregister()
+        self.data5_pub.unregister()
+        self.data6_pub.unregister()
+        self.data7_pub.unregister()
+        self.data8_pub.unregister()
 
         self.cmd_yaw_pub.unregister()
 
@@ -187,16 +191,22 @@ class BTRosInterface:
             # Receive data
             if(self.bt_receiver.read()):
                 packet = self.bt_receiver.packet
-                if (packet[0]==1):
+                if (packet[0]==1 or packet[0]==2):
                     self.bt_receiver.reset()
                     #write data to file
                     self.file_manager.save_data(packet, self.speed, self.torque, self.voltage, self.attitude)
                     #publish data
                     data = self.file_manager.decode(packet)
-                    self.data1_pub.publish(data[0]*57.2958)#*57.2958
-                    self.data2_pub.publish(data[1]*57.2958)#*57.2958
-                    self.data3_pub.publish(data[2])
-                    self.data4_pub.publish(data[3])#*9.5493
+                    if (packet[0]==1):
+                        self.data1_pub.publish(data[0]*57.2958)#*57.2958
+                        self.data2_pub.publish(data[1]*57.2958)#*57.2958
+                        self.data3_pub.publish(data[2])
+                        self.data4_pub.publish(data[3])#*9.5493
+                    else:
+                        self.data5_pub.publish(data[0])
+                        self.data6_pub.publish(data[1])
+                        self.data7_pub.publish(data[2])
+                        self.data8_pub.publish(data[3])
                     self.cmd_yaw_pub.publish(self.attitude[0])
                     self.cmd_speedX_pub.publish(self.speed[0])
                     self.cmd_torqueX_pub.publish(self.torque[0])

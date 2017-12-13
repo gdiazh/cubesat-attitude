@@ -9,11 +9,14 @@ class fileManager(object):
         self.file_path = "motor_model_data/"
         self.file_name = file_name
         self.file_ext = ".txt"
-        self.full_name = self.file_path+self.file_name+self.file_ext
+        self.full_name = self.file_path+self.file_name+"_1"+self.file_ext
+        self.full_name2 = self.file_path+self.file_name+"_2"+self.file_ext
         self.data_file = open(self.full_name, "ab+")
+        self.data_file2 = open(self.full_name2, "ab+")
 
     def stop(self):
         self.data_file.close();
+        self.data_file2.close();
 
     def DEBUG_PRINT(self, msg_type, msg):
         if not(self.debug): return
@@ -129,13 +132,21 @@ class fileManager(object):
 
         return [data1, data2, data3, data4]
 
-    def to_file(self, data, sz):
-        self.data_file = open(self.full_name, "ab+")
-        for i in range(0,sz):
-            self.data_file.write(str(data[i]))
-            self.data_file.write(";")
-        self.data_file.write("\n")
-        self.data_file.close()
+    def to_file(self, data, sz, file):
+        if (file == 1):
+            self.data_file = open(self.full_name, "ab+")
+            for i in range(0,sz):
+                self.data_file.write(str(data[i]))
+                self.data_file.write(";")
+            self.data_file.write("\n")
+            self.data_file.close()
+        else:
+            self.data_file2 = open(self.full_name2, "ab+")
+            for i in range(0,sz):
+                self.data_file2.write(str(data[i]))
+                self.data_file2.write(";")
+            self.data_file2.write("\n")
+            self.data_file2.close()
 
     def save_data(self, packet, speed_ref, torque_ref, voltage_ref, attitude_ref):
         data = self.decode(packet)
@@ -156,7 +167,7 @@ class fileManager(object):
         data.append(attitude_ref[2])
 
         self.DEBUG_PRINT("info", "Data = "+str(data))
-        self.to_file(data, 16)
+        self.to_file(data, 16, packet[0])
 
 
 if __name__ == '__main__':
