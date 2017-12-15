@@ -1,5 +1,6 @@
 scripts/data/
 scripts/motor_model_data/
+scripts/controller_data/
 simulink/motor_model/figs_model_vs_data/
 simulink/motor_model/figs_current_control
 *.pyc
