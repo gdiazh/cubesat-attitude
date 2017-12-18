@@ -250,7 +250,7 @@ FilterOnePole satelliteSpeedFilter(LOWPASS, 0.2);
 // ===       PID Yaw Controller PARAMS                          ===
 // ================================================================
 double yawSetpointMx, yawInputMx, yawControlTorqueMx, yawControlTorqueMx2;
-double Kp_yaw=0.1, Ki_yaw=0.00, Kd_yaw=0.0;
+double Kp_yaw=0.4, Ki_yaw=0.00, Kd_yaw=0.0;
 PID yawControllerMx(&yawInputMx, &yawControlTorqueMx, &yawSetpointMx, Kp_yaw, Ki_yaw, Kd_yaw, DIRECT);
 double sat_turns = 0;
 
@@ -258,7 +258,7 @@ double sat_turns = 0;
 // ===       PID Pitch Controller PARAMS                        ===
 // ================================================================
 double pitchSetpointMx, pitchInputMx, pitchControlTorqueMx, pitchControlTorqueMx2;
-double Kp_pitch=0.08, Ki_pitch=0.00, Kd_pitch=0.00;
+double Kp_pitch=0.5, Ki_pitch=0.00, Kd_pitch=0.00;
 
 // ================================================================
 // ===       PID Speed Controller PARAMS                        ===
@@ -715,7 +715,7 @@ void loop() {
         hddx.rotate(yawControlTorqueMx2);
         hddy.rotate(pitchControlTorqueMx2);
     }
-    send_data(1, yawSetpointMx, yawInputMx, yawControlTorqueMx2, filtered_speed_calib);
+    send_data(1, yawSetpointMx, yawInputMx, yawControlTorqueMx2, pitchControlTorqueMx2);
     // send_data(2, controlVoltageMy, currentInputMx, currentSetpointMy, currentInputMy);
     // send_data(2, current_my, millis(), currentSetpointMy, currentInputMy);
 }

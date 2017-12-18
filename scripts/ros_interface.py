@@ -72,7 +72,7 @@ class BTRosInterface:
         self.data1_pub = rospy.Publisher('/yawSetpointMx', Float32, queue_size=70)
         self.data2_pub = rospy.Publisher('/yawInputMx', Float32, queue_size=70)
         self.data3_pub = rospy.Publisher('/controlVoltage', Float32, queue_size=70)
-        self.data4_pub = rospy.Publisher('/wheelxSpeed', Float32, queue_size=70)
+        self.data4_pub = rospy.Publisher('/pitchControlTorqueMx2', Float32, queue_size=70)
         self.data5_pub = rospy.Publisher('/current_my', Float32, queue_size=70)
         self.data6_pub = rospy.Publisher('/time', Float32, queue_size=70)
         self.data7_pub = rospy.Publisher('/currentSetpointMy', Float32, queue_size=70)
@@ -201,7 +201,7 @@ class BTRosInterface:
                         self.data1_pub.publish(data[0]*57.2958)#*57.2958
                         self.data2_pub.publish(data[1]*57.2958)#*57.2958
                         self.data3_pub.publish(data[2])
-                        self.data4_pub.publish(data[3]*9.5493)#*9.5493
+                        self.data4_pub.publish(data[3])#*9.5493
                     else:
                         self.data5_pub.publish(data[0])
                         self.data6_pub.publish(data[1])
