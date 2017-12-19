@@ -183,8 +183,8 @@ void dmpDataReady() {
 #define ESC2_PWM_PIN_OUT 9
 #define ESC2_DIR_PIN_OUT A0
 
-#define ESC3_PWM_PIN_OUT 9
-// #define ESC3_DIR_PIN_OUT 
+#define ESC3_PWM_PIN_OUT 6
+#define ESC3_DIR_PIN_OUT A1
 
 #define HDD_ZERO_SPEED 1000
 #define MIN_VOLTAGE 0.0
@@ -196,6 +196,7 @@ void dmpDataReady() {
 /*Device Control Handler*/
 HddDriver hddx(ESC_PWM_PIN_OUT, ESC_DIR_PIN_OUT, 1000, 2000, &Serial);
 HddDriver hddy(ESC2_PWM_PIN_OUT, ESC2_DIR_PIN_OUT, 1000, 2000, &Serial);
+HddDriver hddz(ESC3_PWM_PIN_OUT, ESC3_DIR_PIN_OUT, 1000, 2000, &Serial);
 
 float cmdVoltageMx = MIN_VOLTAGE;
 float lastIStpt = MIN_VOLTAGE;
@@ -209,6 +210,8 @@ uint8_t motorx_ref_dir_hasChange = 1;
 float cmdVoltageMy = MIN_VOLTAGE;
 float cmdTorqueMy = 0;
 float cmdSpeedMy = HDD_ZERO_SPEED;
+
+float cmdVoltageMz = MIN_VOLTAGE;
 
 #define TORQUE_MODE 0
 #define SPEED_MODE 1
@@ -250,7 +253,7 @@ FilterOnePole satelliteSpeedFilter(LOWPASS, 0.2);
 // ===       PID Yaw Controller PARAMS                          ===
 // ================================================================
 double yawSetpointMx, yawInputMx, yawControlTorqueMx, yawControlTorqueMx2;
-double Kp_yaw=0.4, Ki_yaw=0.00, Kd_yaw=0.0;
+double Kp_yaw=0.6, Ki_yaw=0.00, Kd_yaw=0.0;
 PID yawControllerMx(&yawInputMx, &yawControlTorqueMx, &yawSetpointMx, Kp_yaw, Ki_yaw, Kd_yaw, DIRECT);
 double sat_turns = 0;
 
@@ -258,7 +261,8 @@ double sat_turns = 0;
 // ===       PID Pitch Controller PARAMS                        ===
 // ================================================================
 double pitchSetpointMx, pitchInputMx, pitchControlTorqueMx, pitchControlTorqueMx2;
-double Kp_pitch=0.5, Ki_pitch=0.00, Kd_pitch=0.00;
+double Kp_pitch=0.7, Ki_pitch=0.00, Kd_pitch=0.00;
+PID pitchControllerMx(&pitchInputMx, &pitchControlTorqueMx, &pitchSetpointMx, Kp_pitch, Ki_pitch, Kd_pitch, DIRECT);
 
 // ================================================================
 // ===       PID Speed Controller PARAMS                        ===
@@ -382,8 +386,14 @@ void setup() {
     // Yaw Controller Initialization
     yawInputMx = 0;
     yawSetpointMx = 0.0;                      	  //[rad]
-    yawControllerMx.SetOutputLimits(-0.45, 0.33);   //[Nm]
+    yawControllerMx.SetOutputLimits(1.9, 4.8);   //[Nm]
     yawControllerMx.SetMode(AUTOMATIC);
+
+    // Pitch Controller Initialization
+    pitchInputMx = 0;
+    pitchSetpointMx = 0.0;                      	  //[rad]
+    pitchControllerMx.SetOutputLimits(1.9, 4.8);   //[Nm]
+    pitchControllerMx.SetMode(AUTOMATIC);
 
     // Speed Controller Initialization
     speedInputMx = 0;
@@ -421,6 +431,7 @@ void setup() {
     //Init HDD
     hddx.init();
     hddy.init();
+    hddz.init();
 }
 
 
@@ -709,13 +720,15 @@ void loop() {
     {
         hddx.rotate(cmdVoltageMx);
         hddy.rotate(cmdVoltageMy);
+        hddz.rotate(cmdVoltageMz);
     }
     else if (operationMode == CLOSELOOP_MODE) //Close Loop
     {
-        hddx.rotate(yawControlTorqueMx2);
+        hddx.rotate(yawControlTorqueMx);
         hddy.rotate(pitchControlTorqueMx2);
+        // hddz.rotate(pitchControlTorqueMx2);
     }
-    send_data(1, yawSetpointMx, yawInputMx, yawControlTorqueMx2, pitchControlTorqueMx2);
+    send_data(1, yawSetpointMx, yawInputMx, yawControlTorqueMx, cmdVoltageMz);
     // send_data(2, controlVoltageMy, currentInputMx, currentSetpointMy, currentInputMy);
     // send_data(2, current_my, millis(), currentSetpointMy, currentInputMy);
 }
@@ -897,6 +910,7 @@ void readCommands()
     {
       cmdVoltageMx = command[1];
       cmdVoltageMy = command[2];
+      cmdVoltageMz = command[3];
     }
     else if(command[0]==SET_TORQUE)
     {
@@ -941,8 +955,10 @@ void readCommands()
       operationMode = OPENLOOP_MODE;
       cmdVoltageMx = MIN_VOLTAGE;
       cmdVoltageMy = MIN_VOLTAGE;
+      cmdVoltageMz = MIN_VOLTAGE;
       hddx.idle();
       hddy.idle();
+      hddz.idle();
     }
     else if (command[0]==STOP_X)
     {
@@ -955,6 +971,12 @@ void readCommands()
       operationMode = OPENLOOP_MODE;
       cmdVoltageMy = MIN_VOLTAGE;
       hddy.idle();
+    }
+    else if (command[0]==STOP_Z)
+    {
+      operationMode = OPENLOOP_MODE;
+      cmdVoltageMz = MIN_VOLTAGE;
+      hddz.idle();
     }
     /*else if (command[0]==PRINT_SPEED)
     {
