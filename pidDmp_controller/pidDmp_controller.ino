@@ -38,10 +38,11 @@ THE SOFTWARE.
 #include <PID_v1.h>
 
 /**
- * @brief Arduino Driver v2.0 to control yaw angle position using DMP6 example
+ * @brief Arduino Driver for Satellite Attitude Control
+   @Author: Gustavo Diaz
  */
  
-/*Modification to DMP example: Gustavo Diaz*/
+/*This code use DMP example for the Attitude Determination*/
 
 /*Requiered Libraries*/
 #include "hdd_driver.h"
@@ -153,22 +154,23 @@ void dmpDataReady() {
 // ===               FRAME TEST PARAMS                          ===
 // ================================================================
 
-#define SET_SPEED 1
-#define KEEP_ATTITUDE 2
-#define SET_MODE 3
-#define STOP 4
-#define USE_CURRENT_SETPOINT 5
-#define INCREASE_SETPOINT 6
-#define DECREASE_SETPOINT 7
-#define PRINT_SPEED 8
-#define AUTOMATIC_MODE 9
-#define STOP_X 10
-#define STOP_Y 11
-#define STOP_Z 12
-
-float a;
-float b;
-uint8_t t;
+#define SET_VOLTAGE 1
+#define SET_TORQUE 2
+#define SET_SPEED 3
+#define KEEP_ATTITUDE 4
+#define SET_MODE 5
+#define STOP 6
+#define USE_CURRENT_SETPOINT 7
+#define INCREASE_SETPOINT 8
+#define DECREASE_SETPOINT 9
+#define PRINT_SPEED 10
+#define AUTOMATIC_MODE 11
+#define STOP_X 12
+#define STOP_Y 13
+#define STOP_Z 14
+#define SET_CONTROL_MODE 15
+#define CHANGE_CURRENT_GAINS 16
+#define CHANGE_SPEED_GAINS 17
 
 // ================================================================
 // ===               Actuators params                           ===
@@ -184,48 +186,114 @@ uint8_t t;
 #define ESC3_PWM_PIN_OUT 5
 #define ESC3_DIR_PIN_OUT A15
 
-#define OFSET 2.1
-
 #define HDD_ZERO_SPEED 1000
+#define MIN_VOLTAGE 0.0
+
+#define MOTOR_STOPPED 0
+#define MOTOR_HOR 1
+#define MOTOR_ANT 2
 
 /*Device Control Handler*/
-HddDriver hddx(ESC_PWM_PIN_OUT, ESC_DIR_PIN_OUT, 1300, 1850, &Serial);
-HddDriver hddy(ESC2_PWM_PIN_OUT, ESC2_DIR_PIN_OUT, 1000, 1500, &Serial);
+HddDriver hddx(ESC_PWM_PIN_OUT, ESC_DIR_PIN_OUT, 1000, 2000, &Serial);
+HddDriver hddy(ESC2_PWM_PIN_OUT, ESC2_DIR_PIN_OUT, 1000, 2000, &Serial);
+HddDriver hddz(ESC3_PWM_PIN_OUT, ESC3_DIR_PIN_OUT, 1000, 2000, &Serial);
 
-int vel_x = HDD_ZERO_SPEED;
-float calc_vel_x = 0;
+float cmdVoltageMx = MIN_VOLTAGE;
+float lastIStpt = MIN_VOLTAGE;
+int8_t currentxSign = 1;
+float cmdTorqueMx = 0;
+float cmdSpeedMx = HDD_ZERO_SPEED;
+float cmdyawMx = 0;
+uint8_t motorx_state = 0;
+uint8_t motorx_ref_dir_hasChange = 1;
 
-int vel_y = HDD_ZERO_SPEED;
-float calc_vel_y = 0;
+float cmdVoltageMy = MIN_VOLTAGE;
+float cmdTorqueMy = 0;
+float cmdSpeedMy = HDD_ZERO_SPEED;
 
-uint8_t mode = 0;
+float cmdVoltageMz = MIN_VOLTAGE;
+
+#define TORQUE_MODE 0
+#define SPEED_MODE 1
+#define POS_MODE 2
+#define OPENLOOP_MODE 0
+#define CLOSELOOP_MODE 1
+
+uint8_t operationMode = OPENLOOP_MODE;
+uint8_t controlMode = TORQUE_MODE;
 
 // ================================================================
 // ===               Sensor PARAMS                              ===
 // ================================================================
 
 #define HALL1 2
-#define HALL2 18
-#define HALL3 19
+// #define HALL2 18
+// #define HALL3 19
 
 unsigned long time_ref = 0;
 volatile uint8_t steps = 0;
 float speed_rpm = 0.0;
 float filtered_speed = 0.0;
-
-float speedFilterFrecuency = 1; //[Hz]
+float speedFilterFrecuency = 0.7; //[Hz]
 FilterOnePole lowpassFilter(LOWPASS, speedFilterFrecuency);
+float filtered_speed_calib = 0.0;
 
 // ================================================================
-// ===               PID PARAMS                                 ===
+// ===               Satellite speed                            ===
 // ================================================================
+unsigned long time_ref_pitch = 0;
+float satellite_speed = 0.0;
+float last_yaw = 0.0;
+float last_ypr0 = 0.0;
 
-//Define Variables we'll be connecting to
-double Setpoint, Input, Output;
+float sateliteFiltered_speed = 0.0;
+FilterOnePole satelliteSpeedFilter(LOWPASS, 0.2);
 
-//Specify the links and initial tuning parameters
-double Kp=5, Ki=1, Kd=1;
-PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
+// ================================================================
+// ===       PID Yaw Controller PARAMS                          ===
+// ================================================================
+double yawSetpointMx, yawInputMx, yawControlTorqueMx, yawControlTorqueMx2;
+double Kp_yaw=0.6, Ki_yaw=0.00, Kd_yaw=0.0;
+PID yawControllerMx(&yawInputMx, &yawControlTorqueMx, &yawSetpointMx, Kp_yaw, Ki_yaw, Kd_yaw, DIRECT);
+double sat_turns = 0;
+
+// ================================================================
+// ===       PID Pitch Controller PARAMS                        ===
+// ================================================================
+double pitchSetpointMx, pitchInputMx, pitchControlTorqueMx, pitchControlTorqueMx2;
+double Kp_pitch=0.7, Ki_pitch=0.00, Kd_pitch=0.00;
+PID pitchControllerMx(&pitchInputMx, &pitchControlTorqueMx, &pitchSetpointMx, Kp_pitch, Ki_pitch, Kd_pitch, DIRECT);
+
+// ================================================================
+// ===       PID Speed Controller PARAMS                        ===
+// ================================================================
+double speedSetpointMx, speedInputMx, controlTorqueMx;
+double Kp_wx=0.001, Ki_wx=0.00, Kd_wx=0.00;
+PID speedControllerMx(&speedInputMx, &controlTorqueMx, &speedSetpointMx, Kp_wx, Ki_wx, Kd_wx, DIRECT);
+
+// ================================================================
+// ===       PID Current Controller PARAMS, Motor x             ===
+// ================================================================
+double currentSetpointMx, currentInputMx, controlVoltageMx;
+double Kp_imx=4, Ki_imx=8, Kd_imx=0;
+PID currentControllerMx(&currentInputMx, &controlVoltageMx, &currentSetpointMx, Kp_imx, Ki_imx, Kd_imx, DIRECT);
+
+// ================================================================
+// ===       PID Current Controller PARAMS, Motor x-N           ===
+// ================================================================
+double currentSetpointMxN, currentInputMxN, controlVoltageMxN, controlVoltageMxB;
+double Kp_imxN=4, Ki_imxN=8, Kd_imxN=0;
+PID currentControllerMxN(&currentInputMxN, &controlVoltageMxN, &currentSetpointMxN, Kp_imxN, Ki_imxN, Kd_imxN, DIRECT);
+
+// ================================================================
+// ===       PID Current Controller PARAMS, Motor y             ===
+// ================================================================
+double currentSetpointMy, currentInputMy, controlVoltageMy;
+double Kp_imy=4, Ki_imy=8, Kd_imy=0;
+PID currentControllerMy(&currentInputMy, &controlVoltageMy, &currentSetpointMy, Kp_imy, Ki_imy, Kd_imy, DIRECT);
+
+unsigned long i_time = 0;
+unsigned long i_time2 = 0;
 
 // ================================================================
 // ===               Comunication                               ===
@@ -234,13 +302,27 @@ uint8_t Timeout = 0;
 uint8_t data_id = 0;
 
 // ================================================================
+// ===               Current Sensor Mx                          ===
+// ================================================================
+#define CURRENT_SENSOR_Mx A2
+float current = 0;
+float filtered_current = 0.0;
+float currentFilterFrecuency = 0.6; //[Hz]
+FilterOnePole currentlowpassFilter(LOWPASS, 2);
+
+// ================================================================
+// ===               Current Sensor My                          ===
+// ================================================================
+#define CURRENT_SENSOR_My A3
+float current_my = 0;
+float filtered_current_my = 0.0;
+FilterOnePole currentlowpassFilterMy(LOWPASS, 2);
+
+// ================================================================
 // ===                      INITIAL SETUP                       ===
 // ================================================================
 
 void setup() {
-    a = 0;
-    b = 0;
-    t = 0;
     // join I2C bus (I2Cdev library doesn't do this automatically)
     #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
         Wire.begin();
@@ -253,9 +335,7 @@ void setup() {
     // (115200 chosen because it is required for Teapot Demo output, but it's
     // really up to you depending on your project)
     Serial.begin(115200);
-    Serial2.begin(115200);
     while (!Serial); // wait for Leonardo enumeration, others continue immediately
-    while (!Serial2);
 
     // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
     // Pro Mini running at 3.3v, cannot handle this baud rate reliably due to
@@ -264,22 +344,10 @@ void setup() {
     // crystal solution for the UART timer.
 
     // initialize device
-    Serial.println(F("Initializing I2C devices..."));
     mpu.initialize();
     pinMode(INTERRUPT_PIN, INPUT);
 
-    // verify connection
-    Serial.println(F("Testing device connections..."));
-    Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
-
-    // wait for ready
-    Serial.println(F("\nSend any character to begin DMP programming and demo: "));
-    /*while (Serial.available() && Serial.read()); // empty buffer
-    while (!Serial.available());                 // wait for data
-    while (Serial.available() && Serial.read()); // empty buffer again*/
-
     // load and configure the DMP
-    Serial.println(F("Initializing DMP..."));
     devStatus = mpu.dmpInitialize();
 
     // supply your own gyro offsets here, scaled for min sensitivity
@@ -291,16 +359,13 @@ void setup() {
     // make sure it worked (returns 0 if so)
     if (devStatus == 0) {
         // turn on the DMP, now that it's ready
-        Serial.println(F("Enabling DMP..."));
         mpu.setDMPEnabled(true);
 
         // enable Arduino interrupt detection
-        Serial.println(F("Enabling interrupt detection (Arduino external interrupt 0)..."));
         attachInterrupt(digitalPinToInterrupt(INTERRUPT_PIN), dmpDataReady, RISING);
         mpuIntStatus = mpu.getIntStatus();
 
         // set our DMP Ready flag so the main loop() function knows it's okay to use it
-        Serial.println(F("DMP ready!"));
         dmpReady = true;
 
         // get expected DMP packet size for later comparison
@@ -310,31 +375,63 @@ void setup() {
         // 1 = initial memory load failed
         // 2 = DMP configuration updates failed
         // (if it's going to break, usually the code will be 1)
-        Serial.print(F("DMP Initialization failed (code "));
-        Serial.print(devStatus);
-        Serial.println(F(")"));
+        // Serial.print(F("DMP Initialization failed (code "));
+        // Serial.print(devStatus);
+        // Serial.println(F(")"));
     }
 
     // configure LED for output
     pinMode(LED_PIN, OUTPUT);
 
-    // PID Initialization
-    //initialize the variables we're linked to
-    Input = 0;
-    Setpoint = -100.0;
-    myPID.SetOutputLimits(-700, 700);
+    // Yaw Controller Initialization
+    yawInputMx = 0;
+    yawSetpointMx = 0.0;                          //[rad]
+    yawControllerMx.SetOutputLimits(1.9, 4.8);   //[Nm]
+    yawControllerMx.SetMode(AUTOMATIC);
 
-    //turn the PID on
-    myPID.SetMode(AUTOMATIC);
+    // Pitch Controller Initialization
+    pitchInputMx = 0;
+    pitchSetpointMx = 0.0;                            //[rad]
+    pitchControllerMx.SetOutputLimits(1.9, 4.8);   //[Nm]
+    pitchControllerMx.SetMode(AUTOMATIC);
+
+    // Speed Controller Initialization
+    speedInputMx = 0;
+    speedSetpointMx = 0.0;                          //[RPM]
+    speedControllerMx.SetOutputLimits(-3.0, 3.0);   //[Nm]
+    speedControllerMx.SetMode(AUTOMATIC);
+
+    // Current Controller Mx Initialization
+    currentInputMx = 0;
+    currentSetpointMx = 0.0;                    //[A]
+    currentControllerMx.SetOutputLimits(1.9, 4.8); //[V]
+    currentControllerMx.SetMode(AUTOMATIC);
+
+    // Current Controller MxN Initialization
+    currentInputMxN = 0;
+    currentSetpointMxN = 0.0;                     //[A]
+    currentControllerMxN.SetOutputLimits(-4.8, -1.9); //[V]
+    currentControllerMxN.SetMode(AUTOMATIC);
+
+    // Current Controller My Initialization
+    currentInputMy = 0;
+    currentSetpointMy = 0.0;                    //[A]
+    currentControllerMy.SetOutputLimits(0, 4.8); //[V]
+    currentControllerMy.SetMode(AUTOMATIC);
 
     //Hall Encoder pins
-    pinMode(HALL3, INPUT);
+    pinMode(HALL1, INPUT);
     attach_halls();
+
+    //Current sensors
+    pinMode(CURRENT_SENSOR_Mx, INPUT);
+    pinMode(CURRENT_SENSOR_My, INPUT);
+
 
     //Init HDD
     hddx.init();
     hddy.init();
-    Serial.println("HDD ready!");
+    hddz.init();
 }
 
 
@@ -372,7 +469,7 @@ void loop() {
     if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
         // reset so we can continue cleanly
         mpu.resetFIFO();
-        Serial.println(F("FIFO overflow!"));
+        // Serial.println(F("FIFO overflow!"));
 
     // otherwise, check for DMP data ready interrupt (this should happen frequently)
     } else if (mpuIntStatus & 0x02) {
@@ -389,26 +486,26 @@ void loop() {
         #ifdef OUTPUT_READABLE_QUATERNION
             // display quaternion values in easy matrix form: w x y z
             mpu.dmpGetQuaternion(&q, fifoBuffer);
-            Serial.print("quat\t");
+            /*Serial.print("quat\t");
             Serial.print(q.w);
             Serial.print("\t");
             Serial.print(q.x);
             Serial.print("\t");
             Serial.print(q.y);
             Serial.print("\t");
-            Serial.println(q.z);
+            Serial.println(q.z);*/
         #endif
 
         #ifdef OUTPUT_READABLE_EULER
             // display Euler angles in degrees
             mpu.dmpGetQuaternion(&q, fifoBuffer);
             mpu.dmpGetEuler(euler, &q);
-            Serial.print("euler\t");
+            /*Serial.print("euler\t");
             Serial.print(euler[0] * 180/M_PI);
             Serial.print("\t");
             Serial.print(euler[1] * 180/M_PI);
             Serial.print("\t");
-            Serial.println(euler[2] * 180/M_PI);
+            Serial.println(euler[2] * 180/M_PI);*/
         #endif
 
         #ifdef OUTPUT_READABLE_YAWPITCHROLL
@@ -430,12 +527,12 @@ void loop() {
             mpu.dmpGetAccel(&aa, fifoBuffer);
             mpu.dmpGetGravity(&gravity, &q);
             mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-            Serial.print("areal\t");
+            /*Serial.print("areal\t");
             Serial.print(aaReal.x);
             Serial.print("\t");
             Serial.print(aaReal.y);
             Serial.print("\t");
-            Serial.println(aaReal.z);
+            Serial.println(aaReal.z);*/
         #endif
 
         #ifdef OUTPUT_READABLE_WORLDACCEL
@@ -446,12 +543,12 @@ void loop() {
             mpu.dmpGetGravity(&gravity, &q);
             mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
             mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
-            Serial.print("aworld\t");
+            /*Serial.print("aworld\t");
             Serial.print(aaWorld.x);
             Serial.print("\t");
             Serial.print(aaWorld.y);
             Serial.print("\t");
-            Serial.println(aaWorld.z);
+            Serial.println(aaWorld.z);*/
         #endif
     
         #ifdef OUTPUT_TEAPOT
@@ -464,7 +561,7 @@ void loop() {
             teapotPacket[7] = fifoBuffer[9];
             teapotPacket[8] = fifoBuffer[12];
             teapotPacket[9] = fifoBuffer[13];
-            Serial.write(teapotPacket, 14);
+            // Serial.write(teapotPacket, 14);
             teapotPacket[11]++; // packetCount, loops at 0xFF on purpose
         #endif
 
@@ -473,31 +570,174 @@ void loop() {
         digitalWrite(LED_PIN, blinkState);
     }
 
-    // updateSetpoint();
+    readCommands();
+
+    //Angle domain transformation
+    if (last_ypr0>3.05 && ypr[0]<0)
+    {
+        sat_turns++;    //Una vuelta en sentido horario
+    }
+    else if (last_ypr0<-3.05 && ypr[0]>0)
+    {
+        sat_turns--;    //Una vuelta en sentido antihorario
+    }
+
+    last_ypr0 = ypr[0];
+
+    //Update Reference for Yaw Controller
+    // yawSetpointMx = cmdyawMx+6.2831*sat_turns;
+    // yawInputMx = ypr[0]+1.5707+6.2831*sat_turns;
+    yawSetpointMx = cmdyawMx;
+    yawInputMx = ypr[0]+3.1415;
+
+    //Satellite Speed Calculation
+    update_satellite_speed();
+    sateliteFiltered_speed = satelliteSpeedFilter.input(satellite_speed);
+
+    //Yaw Controller Calculation
+    yawControllerMx.Compute();        //This update the yawControlTorqueMx variable
+
+    //Update Reference for Speed Controller
+    speedSetpointMx = cmdSpeedMx;
+    // speedSetpointMy = cmdSpeedMy;
+
+    //Speed Calculation
     update_speed();
     filtered_speed = lowpassFilter.input(speed_rpm);
+    if (filtered_speed>5500)
+        filtered_speed_calib = filtered_speed*0.68+870;             //[RPM]
+    else if (filtered_speed<80)
+        filtered_speed_calib = 0;                                   //[RPM]
+    else
+        filtered_speed_calib = filtered_speed;                      //[RPM]
 
-    Input = ypr[0] * 180/M_PI;
-    myPID.Compute();
-
-    float var1 = Input;                 //yaw angle
-    float var2 = ypr[1] * 180/M_PI;     //pitch angle
-    float var3 = speed_rpm;             //wheel speed [rpm]
-    float var4 = filtered_speed;        //filtered wheel speed [rpm]
-
-    /*if (filtered_speed>=3000)
+    //Speed Controller Calculation
+    speedInputMx = filtered_speed_calib;
+    // speedControllerMx.Compute();        //This update the controlTorqueMx variable
+    yawControlTorqueMx2 = Kp_yaw*(yawSetpointMx-yawInputMx)- Kd_yaw*(sateliteFiltered_speed);
+    if (yawSetpointMx-yawInputMx>=0) yawControlTorqueMx2 = yawControlTorqueMx2+1.9;
+    else yawControlTorqueMx2 = 0.0;
+    if (yawControlTorqueMx2>4.8)
     {
-        Serial.print("fs:"); Serial.println(filtered_speed);
-    }*/
+        yawControlTorqueMx2 = 4.8;
+    }
+    else if (yawControlTorqueMx2<0)
+    {
+        yawControlTorqueMx2 = 0.0;
+    }
 
-    main_behavior();
-    send_data(1, var1, var2, var3, var4);
-    // data_id +=1;
+    //pitch controller
+    // pitchControlTorqueMx2 = Kp_pitch*(pitchSetpointMx-pitchInputMx);
+    pitchControlTorqueMx2 = -Kp_pitch*(yawSetpointMx-yawInputMx)+1.9;
+    if (pitchControlTorqueMx2>4.8)
+    {
+        pitchControlTorqueMx2 = 4.8;
+    }
+    else if (pitchControlTorqueMx2<0)
+    {
+        pitchControlTorqueMx2 = 0;
+    }
+
+    //Update Reference for Current Controller
+    if (controlMode == POS_MODE)
+    {
+        currentSetpointMx = yawControlTorqueMx2;//   /KM
+        currentSetpointMxN = yawControlTorqueMx2;//   /KM
+        currentSetpointMy = pitchControlTorqueMx2;//   /KM
+    }
+    else if (controlMode == SPEED_MODE)
+    {
+        currentSetpointMx = controlTorqueMx;//   /KM
+    }
+    else if (controlMode == TORQUE_MODE)
+    {
+        currentSetpointMx = cmdTorqueMx;//      /KM
+        currentSetpointMxN = cmdTorqueMx;//      /KM
+        currentSetpointMy = cmdTorqueMy;//      /KM
+    }
+
+    //Current Mx Calculations
+    float current_raw = analogRead(CURRENT_SENSOR_Mx);
+    if (current_raw>=511) current = (current_raw-511)*0.06;
+    else current = 0;
+    filtered_current = currentlowpassFilter.input(current);     //[A]
+
+    //motor state
+    if (filtered_current<=0.16)
+    {
+        motorx_state = MOTOR_STOPPED;
+    }
+    else
+    {
+        motorx_state = MOTOR_ANT;
+    }
+
+    if ((lastIStpt>=0 && currentSetpointMx<0)||(lastIStpt<0 && currentSetpointMx>=0))
+    {
+        motorx_ref_dir_hasChange = 1;
+    }
+
+    //Current My Calculations
+    float current_raw_my = analogRead(CURRENT_SENSOR_My);
+    if (current_raw_my>=506) current_my = (current_raw_my-506)*0.06;
+    else current_my = 0;
+    filtered_current_my = currentlowpassFilterMy.input(current_my);  //[A]
+
+    //Current Controller Mx Calculation
+    if (motorx_ref_dir_hasChange==1 && filtered_speed_calib<=400)
+    {
+        if (currentSetpointMx>=0) currentxSign=1;
+        else currentxSign=-1;
+        motorx_ref_dir_hasChange = 0;
+    }
+    currentInputMx = filtered_current*currentxSign;
+    currentInputMxN = filtered_current*currentxSign;
+    lastIStpt = currentSetpointMx;
+
+    currentControllerMx.Compute();      //This update the controlVoltageMx variable
+    currentControllerMxN.Compute();      //This update the controlVoltageMxN variable
+
+    //Current Controller My Calculation
+    // i_time = millis()-i_time2;
+    currentInputMy = filtered_current_my;
+    currentControllerMy.Compute();      //This update the controlVoltageMy variable
+    // i_time2 = millis();
+    if (motorx_ref_dir_hasChange==1)
+    {
+        controlVoltageMxB = 0;
+    }
+    else if (currentSetpointMx>=0)
+    {
+        controlVoltageMxB = controlVoltageMx;
+    }
+    else
+    {
+        controlVoltageMxB = controlVoltageMxN;
+    }
+
+    //Set Motor Voltage Based on Operation Mode
+    if (operationMode == OPENLOOP_MODE)      //Open Loop
+    {
+        hddx.rotate(cmdVoltageMx);
+        hddy.rotate(cmdVoltageMy);
+        hddz.rotate(cmdVoltageMz);
+    }
+    else if (operationMode == CLOSELOOP_MODE) //Close Loop
+    {
+        hddx.rotate(yawControlTorqueMx);
+        hddy.rotate(pitchControlTorqueMx2);
+        // hddz.rotate(pitchControlTorqueMx2);
+    }
+    send_data(1, yawSetpointMx, yawInputMx, yawControlTorqueMx, cmdVoltageMz);
+    // send_data(2, controlVoltageMy, currentInputMx, currentSetpointMy, currentInputMy);
+    // send_data(2, current_my, millis(), currentSetpointMy, currentInputMy);
 }
+
+//---------------Comunication Methos-------------------------------------------------------------
 
 void sendFrame(uint8_t frame[], uint8_t sz)
 {   
-    for (int j=0;j<sz;j++) Serial2.write(frame[j]);
+    for (int j=0;j<sz;j++) Serial.write(frame[j]);
 }
 
 uint8_t checksum(uint8_t *packet, uint8_t n)
@@ -509,25 +749,18 @@ uint8_t checksum(uint8_t *packet, uint8_t n)
 
 void bytesEncode(float number, uint8_t encode_bytes[])
 {
-    uint16_t int_part = (uint16_t) abs(number);           //[0-65535]
+    uint16_t int_part = (uint16_t) abs(number);          //[0-65535]
     float decimal_part = (abs(number) - int_part)*100;   //[0-99]
 
     uint8_t NH = (int_part)>>8;                //Number High Byte
     uint8_t NL = (int_part) & 0x00FF;          //Number Low Byte
     uint8_t D = (int)decimal_part;             //Decimal part (7 bits)
-    uint8_t SD = D;                                 //Sign and Decimal Byte
-    if (number<=0) SD = D|0b10000000;               //Sign bit
+    uint8_t SD = D;                            //Sign and Decimal Byte
+    if (number<=0) SD = D|0b10000000;          //Sign bit
 
     encode_bytes[0] = NH;
     encode_bytes[1] = NL;
     encode_bytes[2] = SD;
-
-    /*if (NH>=11)
-    {
-        Serial.print("n:"); Serial.println(number);
-        Serial.print("p:"); Serial.print(int_part);Serial.print(",");Serial.println(decimal_part);
-        Serial.print("b:"); Serial.print(NH);Serial.print(",");Serial.print(NL);Serial.print(",");Serial.println(SD);
-    }*/
 }
 
 void encode(uint8_t id, float data[], uint8_t packet[])
@@ -574,18 +807,6 @@ void printFrame(uint8_t frame[], uint8_t sz)
     Serial.println("]");
 }
 
-void printCommand(float com[], uint8_t sz)
-{
-    Serial.print("command = [");
-    for (int i = 0; i < sz-1; i++)
-    {
-        Serial.print(com[i]);
-        Serial.print(",");
-    }
-    Serial.print(com[sz-1]);
-    Serial.println("]");
-}
-
 void send_data(uint8_t id, float D1, float D2, float D3, float D4)
 {
     float data[4] = {D1, D2, D3, D4};
@@ -593,15 +814,6 @@ void send_data(uint8_t id, float D1, float D2, float D3, float D4)
     encode(id, data, frame_test);
     sendFrame(frame_test, 14);
     // printFrame(frame_test, 14);
-}
-
-void updateSetpoint(void)
-{
-    if(Serial2.available() >= 1)
-    {
-        Setpoint = Serial2.parseInt();
-        Serial.print("Setpoint = "); Serial.println(Setpoint);
-    }
 }
 
 float getNumber(uint8_t byte1, uint8_t byte2, uint8_t byte3)
@@ -639,7 +851,6 @@ void decode(uint8_t frame[], float data[])
 
 void stop_read(void)
 {
-    Serial.print("Stop Read");
     // Timer1.detachInterrupt();
     Timeout = 1;
 }
@@ -649,32 +860,26 @@ uint8_t read(uint8_t frame[])
     uint8_t i = 0;
     uint8_t k = 0;
     uint8_t sz = 13;
-    // Serial.print("r");
     // Timer1.initialize(30000);
     // Timer1.attachInterrupt(stop_read);
     while (k < 2*sz)// and !Timeout)
-    // while (Serial2.available() >= 1)
+    // while (Serial.available() >= 1)
     {
-        // Serial.print(">");
-        if (Serial2.available() >= 1)
+        if (Serial.available() >= 1)
         {
-            uint8_t byte = Serial2.read();
+            uint8_t byte = Serial.read();
             frame[i] = byte;
-            // Serial.println(byte);
             i+=1;
             if (i==sz)
             {
                 uint8_t chksm = checksum(frame, sz);
                 if (chksm == frame[sz-1] && chksm !=0)
                 {
-                    printFrame(frame, 13);
                     return 1; // packet received OK
                 }
                 else
                 {
                     // Bad checksum
-                    printFrame(frame, 13);
-                    Serial.println("Bad checksum");
                     for (uint8_t j = 0; j < sz-1; j++)
                     {
                         frame[j] = frame[j+1]; // Shift frame Left
@@ -687,129 +892,128 @@ uint8_t read(uint8_t frame[])
         }
     }
     // Frame not received Correctly
-    Serial.println("Frame Lost");
     for (uint8_t j = 0; j < sz; j++) frame[j] = 0; // Reset packet
     // Timeout = 0;
-    // while(Serial2.available()) Serial2.read();
+    // while(Serial.available()) Serial.read();
     return 0;
 }
 
-void main_behavior()
+void readCommands()
 {
-  // Serial.println("M");
-  /* test behavior */
-  if (mode == 0)
-  {
-    hddx.rotate(vel_x);
-    hddy.rotate(vel_y);
-  }
-  else if (mode == 1)
-  {
-    hddx.rotate(calc_vel_x);
-    hddy.rotate(calc_vel_y);
-  }
-
-  //Calcs
-  calc_vel_x = Output;
-  calc_vel_y = Output;
-
-  if(Serial2.available() >= 1)
+  if(Serial.available() >= 1)
   {
     uint8_t frame[13];
     float command[4];
     read(frame);
     decode(frame, command);
-    // printFrame(frame, 13);
-    // printCommand(command, 4);
-    if(command[0]==SET_SPEED)
+    if(command[0]==SET_VOLTAGE)
     {
-      mode = 0;
-      vel_x = command[1];
-      vel_y = command[2];
-      Serial.print("New speed set: ");
-      Serial.print(vel_x);Serial.print(",");Serial.println(vel_y);
+      cmdVoltageMx = command[1];
+      cmdVoltageMy = command[2];
+      cmdVoltageMz = command[3];
+    }
+    else if(command[0]==SET_TORQUE)
+    {
+      cmdTorqueMx = command[1];
+      cmdTorqueMy = command[2];
+    }
+    else if(command[0]==SET_SPEED)
+    {
+      cmdSpeedMx = command[1];
+      cmdSpeedMy = command[2];
     }
     else if (command[0]==KEEP_ATTITUDE)
     {
-      Setpoint = command[1];
-      Serial.println("change set point");
+      cmdyawMx = command[1]*0.0175;
+      /*cmdPitchSetpoint = command[2];
+      cmdRollSetpoint = command[3];*/
     }
     else if (command[0]==SET_MODE)
     {
-      mode = command[1];
-      Serial.println("change mode");
+      operationMode = command[1];
+    }
+    else if (command[0]==SET_CONTROL_MODE)
+    {
+      controlMode = command[1];
+    }
+    else if (command[0]==CHANGE_CURRENT_GAINS)
+    {
+      Kp_imx = command[1];
+      Ki_imx = command[2];
+      Kd_imx = command[3];
+      currentControllerMx.SetTunings(Kp_imx, Ki_imx, Kd_imx);
+    }
+    else if (command[0]==CHANGE_SPEED_GAINS)
+    {
+      Kp_wx = command[1];
+      Ki_wx = command[2];
+      Kd_wx = command[3];
+      speedControllerMx.SetTunings(Kp_wx, Ki_wx, Kd_wx);
     }
     else if (command[0]==STOP)
     {
-      mode = 0;
-      vel_x = HDD_ZERO_SPEED;
-      vel_y = HDD_ZERO_SPEED;
+      operationMode = OPENLOOP_MODE;
+      cmdVoltageMx = MIN_VOLTAGE;
+      cmdVoltageMy = MIN_VOLTAGE;
+      cmdVoltageMz = MIN_VOLTAGE;
       hddx.idle();
       hddy.idle();
-      Serial.println("Motor Stoped");
+      hddz.idle();
     }
     else if (command[0]==STOP_X)
     {
-      mode = 0;
-      vel_x = HDD_ZERO_SPEED;
+      operationMode = OPENLOOP_MODE;
+      cmdVoltageMx = MIN_VOLTAGE;
       hddx.idle();
-      Serial.println("Motor X Stoped");
     }
     else if (command[0]==STOP_Y)
     {
-      mode = 0;
-      vel_y = HDD_ZERO_SPEED;
+      operationMode = OPENLOOP_MODE;
+      cmdVoltageMy = MIN_VOLTAGE;
       hddy.idle();
-      Serial.println("Motor Y Stoped");
     }
-    else if (command[0]==PRINT_SPEED)
+    else if (command[0]==STOP_Z)
     {
-        Serial.print("Motor speed: ");
-        if (mode == 0){
-        Serial.print(vel_x);Serial.print(",");Serial.println(vel_y);
-        }
-        else if (mode == 1){
-            Serial.print(calc_vel_x);Serial.print(",");Serial.println(calc_vel_y);
-        }
+      operationMode = OPENLOOP_MODE;
+      cmdVoltageMz = MIN_VOLTAGE;
+      hddz.idle();
     }
+    /*else if (command[0]==PRINT_SPEED)
+    {
+        TODO: send speed
+    }*/
     else if (command[0] == AUTOMATIC_MODE)
     {
-      mode = 1;
-      Serial.print("Balance Mode");
-      Serial.print("Motor speed: ");
-      Serial.print(calc_vel_x);Serial.print(",");Serial.println(calc_vel_y);
+      operationMode = CLOSELOOP_MODE;
     }
-    else if (command[0] == USE_CURRENT_SETPOINT)
+    /*else if (command[0] == USE_CURRENT_SETPOINT)
     {
-      Setpoint = Input;
-      Serial.println("using current pos as setpoint");
-    }
-    else if (command[0] == INCREASE_SETPOINT)
+      cmdYawSetpoint = ypr[0]*180/M_PI;
+    }*/
+    /*else if (command[0] == INCREASE_SETPOINT)
     {
-      Setpoint = Setpoint+10;
-      Serial.println("Increase setpoint");
+      cmdYawSetpoint+=10;
     }
     else if (command[0] == DECREASE_SETPOINT)
     {
-      Setpoint = Setpoint-10;
-      Serial.println("decrease setpoint");
-    }
-    Serial.print(Input); Serial.print("\t\t\t"); Serial.println(Output);
+      cmdYawSetpoint-=10;
+    }*/
   }
 }
-
+//---------------Sensor Methos-------------------------------------------------------------
+//---------------Hall efect Sensor Methos--------------------------------------------------
 void attach_halls(void)
 {
-    // attachInterrupt(digitalPinToInterrupt(HALL1), step, FALLING);
+    attachInterrupt(digitalPinToInterrupt(HALL1), step, FALLING);
     // attachInterrupt(digitalPinToInterrupt(HALL2), step, FALLING);
-    attachInterrupt(digitalPinToInterrupt(HALL3), step, FALLING);
+    // attachInterrupt(digitalPinToInterrupt(HALL3), step, FALLING);
 }
 
 void dettach_halls(void)
 {
-    // detachInterrupt(digitalPinToInterrupt(HALL1));
+    detachInterrupt(digitalPinToInterrupt(HALL1));
     // detachInterrupt(digitalPinToInterrupt(HALL2));
-    detachInterrupt(digitalPinToInterrupt(HALL3));
+    // detachInterrupt(digitalPinToInterrupt(HALL3));
 }
 
 void update_speed(void)
@@ -818,7 +1022,7 @@ void update_speed(void)
     {
         // Serial.print("steps:");Serial.println(steps);
         dettach_halls();
-        speed_rpm = 30000.0*steps/(millis()-time_ref);
+        speed_rpm = 60000.0*steps/(millis()-time_ref);
         // Serial.print("speed_rpm:");Serial.println(speed_rpm);
 
         time_ref = millis();
@@ -831,4 +1035,12 @@ void update_speed(void)
 void step(void)
 {
     steps++;
+}
+
+//---------------Hall efect Sensor Methos--------------------------------------------------
+void update_satellite_speed(void)
+{
+    satellite_speed = 1000*(yawInputMx-last_yaw)/(millis()-time_ref_pitch);    //[rad/s]
+    time_ref_pitch = millis();
+    last_yaw = yawInputMx;
 }

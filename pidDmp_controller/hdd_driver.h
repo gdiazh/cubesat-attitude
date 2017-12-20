@@ -14,7 +14,7 @@
 #define JUMPING_DELAY 4000
 
 // Motor parameters
-#define Km 0.0251
+#define Km 0.075
 #define K_ESC 100
 #define MAX_TORQUE 700
 
@@ -24,7 +24,7 @@ typedef struct StateVariables{
 } StateVariables;
 
 typedef struct OutputVariables{
-    float output_vel;
+    float output_voltage;
     float output_pwm;
     int output_dir;
 } OutputVariables;
@@ -73,17 +73,13 @@ public:
     void init(void);
     void idle();
     void init_esc();
-    void rotate(float vel);
+    void rotate(float voltage);
     // void printVariables(void);
 
 private:
     // methods
     
-    // Declaration for Math functions
-    float torque2pwm(float value, float toLow, float toHigh);
-
     // Declaration of Output Handlers
-    float motor_dynamic(float torque);
-    int pwm_modulation(float vel_control);
-    uint8_t direction_handler(float vel_control);
+    int voltage_to_pwm(float voltage);
+    uint8_t direction_handler(float voltage);
 };
