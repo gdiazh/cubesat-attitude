@@ -334,8 +334,8 @@ void setup() {
     // initialize serial communication
     // (115200 chosen because it is required for Teapot Demo output, but it's
     // really up to you depending on your project)
-    Serial.begin(115200);
-    while (!Serial); // wait for Leonardo enumeration, others continue immediately
+    Serial2.begin(115200);
+    while (!Serial2); // wait for Leonardo enumeration, others continue immediately
 
     // NOTE: 8MHz or slower host processors, like the Teensy @ 3.3v or Ardunio
     // Pro Mini running at 3.3v, cannot handle this baud rate reliably due to
@@ -442,7 +442,7 @@ void setup() {
 
 void loop() {
     // if programming failed, don't try to do anything
-    if (!dmpReady) return;
+    // if (!dmpReady) return;
 
     // wait for MPU interrupt or extra packet(s) available
     while (!mpuInterrupt && fifoCount < packetSize) {
@@ -737,7 +737,7 @@ void loop() {
 
 void sendFrame(uint8_t frame[], uint8_t sz)
 {   
-    for (int j=0;j<sz;j++) Serial.write(frame[j]);
+    for (int j=0;j<sz;j++) Serial2.write(frame[j]);
 }
 
 uint8_t checksum(uint8_t *packet, uint8_t n)
@@ -865,9 +865,9 @@ uint8_t read(uint8_t frame[])
     while (k < 2*sz)// and !Timeout)
     // while (Serial.available() >= 1)
     {
-        if (Serial.available() >= 1)
+        if (Serial2.available() >= 1)
         {
-            uint8_t byte = Serial.read();
+            uint8_t byte = Serial2.read();
             frame[i] = byte;
             i+=1;
             if (i==sz)
@@ -900,7 +900,7 @@ uint8_t read(uint8_t frame[])
 
 void readCommands()
 {
-  if(Serial.available() >= 1)
+  if(Serial2.available() >= 1)
   {
     uint8_t frame[13];
     float command[4];
