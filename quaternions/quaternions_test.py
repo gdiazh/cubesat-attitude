@@ -1,0 +1,75 @@
+#!/usr/bin/python
+
+__author__ = 'gdiaz'
+
+import matplotlib as mpl
+from plotVectors import PlotVectors
+import numpy as np
+
+class Rotation(object):
+    def __init__(self):
+        self.vectors = PlotVectors()
+        self.a = [0, 0, 0]
+
+    def rotate_z(self, a, yaw):
+        Az = np.matrix([[np.cos(yaw), -np.sin(yaw), 0],
+                        [np.sin(yaw), np.cos(yaw), 0],
+                        [0, 0, 1]])
+        a_ = np.matrix([[a[0]],
+                        [a[1]],
+                        [a[2]]])
+        u = Az*a_
+        return [u.item(0), u.item(1), u.item(2)]
+
+    def rotate_frame_z(self, I, J, K, yaw):
+        Az = np.matrix([[np.cos(yaw), np.sin(yaw), 0],
+                        [-np.sin(yaw), np.cos(yaw), 0],
+                        [0, 0, 1]])
+        I_ = np.matrix([I[0], I[1], I[2]])
+        J_ = np.matrix([J[0], J[1], J[2]])
+        K_ = np.matrix([K[0], K[1], K[2]])
+        
+        i_ = I_*Az
+        j_ = J_*Az
+        k_ = K_*Az
+
+        i = [i_.item(0), i_.item(1), i_.item(2)]
+        j = [j_.item(0), j_.item(1), j_.item(2)]
+        k = [k_.item(0), k_.item(1), k_.item(2)]
+
+        return [i, j, k]
+
+    def vectorRotationTest(self):
+        # Calcs
+        p1 = [2, 0, 0]
+        yaw = 90*np.pi/180
+        p1_rot = self.rotate_z(p1, yaw)
+        print p1_rot
+        # Plot
+        self.vectors.plotAxes()
+        self.vectors.config()
+        self.vectors.plot(p1)
+        self.vectors.plot(p1_rot)
+        self.vectors.show()
+
+    def frameRotationTest(self):
+        # Calcs
+        I = [1, 0, 0]
+        J = [0, 1, 0]
+        K = [0, 0, 1]
+        yaw = 45*np.pi/180
+        ijk = self.rotate_frame_z(I, J, K, yaw)
+        print ijk
+        # Plot
+        self.vectors.plotAxes()
+        self.vectors.config()
+        self.vectors.plot(ijk[0])
+        self.vectors.plot(ijk[1])
+        self.vectors.plot(ijk[2])
+        self.vectors.show()
+
+if __name__ == '__main__':
+    rotation = Rotation()
+    # Test Example
+    # rotation.vectorRotationTest()
+    rotation.frameRotationTest()
