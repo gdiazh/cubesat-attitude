@@ -16,6 +16,7 @@ from std_msgs.msg import Float32MultiArray
 from bt_receiver import btReceiver
 from file_manager import fileManager
 from command_parser import CommandParser
+from rotations import Rotation
 
 # Controller commands
 from command_parser import HDD_ZERO_SPEED
@@ -27,6 +28,7 @@ class BTRosInterface:
         self.bt_receiver = btReceiver(debug = True)
         self.file_manager = fileManager(test_name, debug = True)
         self.command_parser = CommandParser()
+        self.rotation = Rotation()
         self.mode = "manual"
         self.control_mode = "torque"
         self.attitude = [0,0,0]                                         #[ypr]  [DEG]
@@ -69,10 +71,10 @@ class BTRosInterface:
         self.wGains_sub = rospy.Subscriber('/wGains', Float32MultiArray, self.set_wGains)
 
         #publishers
-        self.data1_pub = rospy.Publisher('/q1', Float32, queue_size=70)
-        self.data2_pub = rospy.Publisher('/q2', Float32, queue_size=70)
-        self.data3_pub = rospy.Publisher('/q3', Float32, queue_size=70)
-        self.data4_pub = rospy.Publisher('/q4', Float32, queue_size=70)
+        self.data1_pub = rospy.Publisher('/q4', Float32, queue_size=70)
+        self.data2_pub = rospy.Publisher('/q1', Float32, queue_size=70)
+        self.data3_pub = rospy.Publisher('/q2', Float32, queue_size=70)
+        self.data4_pub = rospy.Publisher('/q3', Float32, queue_size=70)
         self.data5_pub = rospy.Publisher('/current_my', Float32, queue_size=70)
         self.data6_pub = rospy.Publisher('/time', Float32, queue_size=70)
         self.data7_pub = rospy.Publisher('/currentSetpointMy', Float32, queue_size=70)
@@ -83,6 +85,15 @@ class BTRosInterface:
         self.cmd_speedX_pub = rospy.Publisher('/cmd_speedX', Float32, queue_size=70)
         self.cmd_torqueX_pub = rospy.Publisher('/cmd_torqueX', Float32, queue_size=70)
         self.cmd_voltageX_pub = rospy.Publisher('/cmd_voltageX', Float32, queue_size=70)
+
+        self.qE4_pub = rospy.Publisher('/qE4', Float32, queue_size=70)
+        self.qE1_pub = rospy.Publisher('/qE1', Float32, queue_size=70)
+        self.qE2_pub = rospy.Publisher('/qE2', Float32, queue_size=70)
+        self.qE3_pub = rospy.Publisher('/qE3', Float32, queue_size=70)
+
+        self.qDE1_pub = rospy.Publisher('/qDE1', Float32, queue_size=70)
+        self.qDE2_pub = rospy.Publisher('/qDE2', Float32, queue_size=70)
+        self.qDE3_pub = rospy.Publisher('/qDE3', Float32, queue_size=70)
 
         Thread(target=self.update_state).start()
 
@@ -124,6 +135,15 @@ class BTRosInterface:
         self.cmd_speedX_pub.unregister()
         self.cmd_torqueX_pub.unregister()
         self.cmd_voltageX_pub.unregister()
+
+        self.qE4_pub.unregister()
+        self.qE1_pub.unregister()
+        self.qE2_pub.unregister()
+        self.qE3_pub.unregister()
+
+        self.qDE1_pub.unregister()
+        self.qDE2_pub.unregister()
+        self.qDE3_pub.unregister()
 
         self.bt_receiver.stop()
         self.file_manager.stop()
@@ -198,10 +218,20 @@ class BTRosInterface:
                     #publish data
                     data = self.file_manager.decode(packet)
                     if (packet[0]==1):
-                        self.data1_pub.publish(data[0]*57.2958)#*57.2958
-                        self.data2_pub.publish(data[1]*57.2958)#*57.2958
+                        self.data1_pub.publish(data[0])#*57.2958
+                        self.data2_pub.publish(data[1])#*57.2958
                         self.data3_pub.publish(data[2])
                         self.data4_pub.publish(data[3])#*9.5493
+
+                        qE = self.rotation.get_qE(self.attitude[0]*0.0174, [data[0], data[1], data[2], data[3]])
+                        self.qE4_pub.publish(qE[0])
+                        self.qE1_pub.publish(qE[1])
+                        self.qE2_pub.publish(qE[2])
+                        self.qE3_pub.publish(qE[3])
+
+                        self.qDE1_pub.publish(qE[1]*qE[0])
+                        self.qDE2_pub.publish(qE[2]*qE[0])
+                        self.qDE3_pub.publish(qE[3]*qE[0])
                     else:
                         self.data5_pub.publish(data[0])
                         self.data6_pub.publish(data[1])

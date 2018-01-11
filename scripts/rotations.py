@@ -69,8 +69,8 @@ class Rotation(object):
         self.vectors.show()
 
     def get_qT(self, yawT): #Return quaternion target given yaw target
-        AT = np.matrix([[np.cos(yaw), np.sin(yaw), 0],
-                        [-np.sin(yaw), np.cos(yaw), 0],
+        AT = np.matrix([[np.cos(yawT), np.sin(yawT), 0],
+                        [-np.sin(yawT), np.cos(yawT), 0],
                         [0, 0, 1]])
 
         q4 = 0.5*np.sqrt(1+AT[0,0]+AT[1,1]+AT[2,2])
@@ -80,20 +80,25 @@ class Rotation(object):
 
         return [q4, q1, q2, q3]
 
-    def get_qE(self, qT, qS):
+    def get_qE_(self, qT, qS):
         qT_ = np.matrix([[qT[0], qT[3], -qT[2], qT[1]],
-                        [-qT[3], qT[4], qT[1], qT[2]],
+                        [-qT[3], qT[0], qT[1], qT[2]],
                         [qT[2], -qT[1], qT[0], qT[3]],
                         [-qT[1], -qT[2], -qT[3], qT[0]]])
 
         qS_ = np.matrix([[-qS[1]],
                         [-qS[2]],
                         [-qS[3]],
-                        [qS[4]]])
+                        [qS[0]]])
 
         qE = qT_*qS_
 
-        return [qE.item(0), qE.item(1), qE.item(2)]
+        return [qE.item(0), qE.item(1), qE.item(2), qE.item(3)]
+
+    def get_qE(self, yawT, qS):
+        qT = self.get_qT(yawT)
+        qE = self.get_qE_(qT, qS)
+        return qE
 
 if __name__ == '__main__':
     rotation = Rotation()
