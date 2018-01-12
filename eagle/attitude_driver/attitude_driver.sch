@@ -6,7 +6,7 @@
 <setting alwaysvectorfont="no"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="0.1" unitdist="inch" unit="mm" style="dots" multiple="1" display="yes" altdistance="0.01" altunitdist="inch" altunit="mm"/>
+<grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="no" active="no"/>
 <layer number="2" name="Route2" color="1" fill="3" visible="no" active="no"/>
@@ -5302,7 +5302,8 @@ This footprint was designed to help hold the alignment of a through-hole compone
 <variantdefs>
 </variantdefs>
 <classes>
-<class number="0" name="default" width="0" drill="0">
+<class number="0" name="default" width="1" drill="0">
+<clearance class="0" value="0.3"/>
 </class>
 </classes>
 <parts>
@@ -5465,17 +5466,6 @@ This footprint was designed to help hold the alignment of a through-hole compone
 <pinref part="J16" gate="G$1" pin="2"/>
 <wire x1="-22.86" y1="76.2" x2="-22.86" y2="73.66" width="0.1524" layer="91"/>
 <label x="-22.86" y="73.66" size="1.778" layer="95" rot="R270"/>
-</segment>
-<segment>
-<pinref part="U$1" gate="G$1" pin="COIL0"/>
-<pinref part="U$2" gate="G$1" pin="COIL1"/>
-<wire x1="127" y1="88.9" x2="119.38" y2="88.9" width="0.1524" layer="91"/>
-<pinref part="T1" gate="G$1" pin="E"/>
-<wire x1="119.38" y1="88.9" x2="111.76" y2="88.9" width="0.1524" layer="91"/>
-<wire x1="119.38" y1="99.06" x2="119.38" y2="88.9" width="0.1524" layer="91"/>
-<junction x="119.38" y="88.9"/>
-<pinref part="D1" gate="G$1" pin="C"/>
-<wire x1="119.38" y1="86.36" x2="119.38" y2="88.9" width="0.1524" layer="91"/>
 </segment>
 <segment>
 <pinref part="U$1" gate="G$1" pin="COIL1"/>
@@ -5671,11 +5661,6 @@ This footprint was designed to help hold the alignment of a through-hole compone
 <wire x1="68.58" y1="40.64" x2="71.12" y2="40.64" width="0.1524" layer="91"/>
 <label x="71.12" y="40.64" size="1.778" layer="95"/>
 </segment>
-<segment>
-<pinref part="J16" gate="G$1" pin="1"/>
-<wire x1="-25.4" y1="76.2" x2="-25.4" y2="73.66" width="0.1524" layer="91"/>
-<label x="-25.4" y="73.66" size="1.778" layer="95" rot="R270"/>
-</segment>
 </net>
 <net name="ESC-S3" class="0">
 <segment>
@@ -5694,6 +5679,11 @@ This footprint was designed to help hold the alignment of a through-hole compone
 <pinref part="J5" gate="J$1" pin="2"/>
 <wire x1="68.58" y1="22.86" x2="71.12" y2="22.86" width="0.1524" layer="91"/>
 <label x="71.12" y="22.86" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="J16" gate="G$1" pin="1"/>
+<wire x1="-25.4" y1="76.2" x2="-25.4" y2="73.66" width="0.1524" layer="91"/>
+<label x="-25.4" y="73.66" size="1.778" layer="95" rot="R270"/>
 </segment>
 </net>
 <net name="CURRENT" class="0">
@@ -5912,6 +5902,19 @@ This footprint was designed to help hold the alignment of a through-hole compone
 <pinref part="B1" gate="G$1" pin="A1"/>
 <wire x1="33.02" y1="40.64" x2="35.56" y2="40.64" width="0.1524" layer="91"/>
 <label x="35.56" y="40.64" size="1.778" layer="95"/>
+</segment>
+</net>
+<net name="N$4" class="0">
+<segment>
+<pinref part="U$1" gate="G$1" pin="COIL0"/>
+<pinref part="U$2" gate="G$1" pin="COIL1"/>
+<wire x1="111.76" y1="88.9" x2="119.38" y2="88.9" width="0.1524" layer="91"/>
+<pinref part="D1" gate="G$1" pin="C"/>
+<wire x1="119.38" y1="88.9" x2="127" y2="88.9" width="0.1524" layer="91"/>
+<wire x1="119.38" y1="86.36" x2="119.38" y2="88.9" width="0.1524" layer="91"/>
+<junction x="119.38" y="88.9"/>
+<pinref part="T1" gate="G$1" pin="E"/>
+<wire x1="119.38" y1="99.06" x2="119.38" y2="88.9" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
