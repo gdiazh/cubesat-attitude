@@ -6,7 +6,7 @@ import rospy
 class fileManager(object):
     def __init__(self, file_name, debug = False):
         self.debug = debug
-        self.file_path = "jp-5feb/"
+        self.file_path = "29mar/"
         self.file_name = file_name
         self.file_ext = ".txt"
         self.full_name = self.file_path+self.file_name+"_1"+self.file_ext

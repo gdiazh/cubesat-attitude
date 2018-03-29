@@ -17,8 +17,8 @@ class btReceiver(object):
 
     def initialize(self):
         #Buetooth
-        bt_addr = "00:13:04:03:00:02"
-        # bt_addr = "30:14:11:10:08:12"
+        # bt_addr = "00:13:04:03:00:02" #CUBE
+        bt_addr = "30:14:11:10:08:12" #SATBOT(one axis)
         local_port = 1
         # TO DO: check if actually succeed
         self.btSocket.connect((bt_addr, local_port))
