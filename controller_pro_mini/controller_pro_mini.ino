@@ -732,6 +732,7 @@ void loop() {
     // send_data(2, controlVoltageMy, currentInputMx, currentSetpointMy, currentInputMy);
     // send_data(2, current_my, millis(), currentSetpointMy, currentInputMy);
     send_data(1, q.w, q.x, q.y, q.z);
+    send_data(2, millis(), filtered_current, filtered_current_my, filtered_speed_calib);
 }
 
 //---------------Comunication Methos-------------------------------------------------------------
